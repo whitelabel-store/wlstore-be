@@ -16,7 +16,7 @@
 # --platform=$BUILDPLATFORM: o Maven roda na arquitetura do runner (nativo).
 # O .jar é o mesmo em amd64 e arm64, então no build multi-arch só o estágio de
 # runtime é por arquitetura — sem emular a compilação no QEMU, que é lenta.
-FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-26 AS build
 WORKDIR /src
 
 ARG SERVICE
