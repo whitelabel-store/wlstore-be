@@ -9,10 +9,20 @@
 #                                                         └──► ci (check único)
 #
 # Fluxo de branches → ambientes:
-#   feature/*  ──PR──►  develop  ──PR──►  main
-#      │                   │                │
-#   PR: test + build    push: + deploy   push: + deploy
-#   (validação)           em develop       em prod
+#   feature/*  ──PR──►  develop  ──PR──►  main  ──release──►  prod
+#      │                   │                │            (release.yml)
+#   PR: test + build    push: test +     merge: só o      versão 1.4.0,
+#   (validação)         build + deploy   CodeQL (é o      changelog, mesma
+#                       em develop       candidato)       imagem de develop
+#
+# Uma execução por mudança:
+#   - PR develop → main NÃO roda este workflow: o head do PR é o mesmo commit
+#     que o push na develop já validou, e o check `ci` desse commit vale para
+#     o PR (checks são por commit, não por evento).
+#   - merge na main não faz deploy: prod recebe só RELEASES (release.yml,
+#     botão "Run workflow"), que reaproveitam a imagem já testada.
+#   - workflow_dispatch na main = porta de emergência: builda e faz deploy em
+#     prod direto (hotfix), com tag sha-<commit>.
 #
 # Só os apps AFETADOS pelo push são testados/buildados/deployados (campo
 # `paths`). Buildam TODOS: workflow_dispatch, primeiro push de uma branch e
@@ -32,9 +42,10 @@ name: build-and-deploy
 
 on:
   push:
-    branches: [develop, main]
+    branches: [develop]
+  # Só PRs para a develop (features). PR develop → main usa o `ci` do push.
   pull_request:
-    branches: [develop, main]
+    branches: [develop]
   workflow_dispatch:
 
 env:
@@ -42,7 +53,7 @@ env:
   INFRA_REPO: infra-devops-full/infra   # owner/repo da plataforma DevOps
   INFRA_BRANCH: main                     # branch que o ArgoCD acompanha
   INFRA_PROJECT: wlstore                 # pasta em projects/ no repo de infra
-  # develop → ambiente develop; main → ambiente prod.
+  # develop → ambiente develop; main (só workflow_dispatch) → prod.
   DEPLOY_ENV: ${{ github.ref_name == 'main' && 'prod' || 'develop' }}
   # PR só valida (sem push); push publica a imagem.
   PUBLISH: ${{ github.event_name != 'pull_request' }}
@@ -51,6 +62,13 @@ env:
   NPM_VERSION: "11.6.2"
   PNPM_VERSION: "10.29.3"
   JAVA_VERSION: "21"
+  # Registry npm de pacotes privados/internos (opcional). Ex.: pacotes da org no
+  # GitHub Packages → NPM_REGISTRY: https://npm.pkg.github.com e
+  # NPM_SCOPE: "@minha-org". Vazio = só o npmjs. O token é o GITHUB_TOKEN do
+  # run: nos testes como NODE_AUTH_TOKEN e no Docker como build secret
+  # `npm_token` (o Dockerfile lê /run/secrets/npm_token só no `npm ci`).
+  NPM_REGISTRY: ""
+  NPM_SCOPE: ""
 
 concurrency:
   group: build-${{ github.ref }}
@@ -132,10 +150,12 @@ jobs:
               changed = None
           def affected(a):
               return changed is None or any(f.startswith(p) for f in changed for p in a["paths"])
-          selected = [{k: v for k, v in a.items() if k != "paths"} for a in apps if affected(a)]
+          targets = [a for a in apps if affected(a)]
+
+          selected = [{k: v for k, v in a.items() if k != "paths"} for a in targets]
           names = " ".join(a["app"] for a in selected)
           print("arquivos alterados:", "todos" if changed is None else len(changed))
-          print("apps afetados:", names or "nenhum")
+          print("apps a buildar:", names or "nenhum")
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write("matrix=" + json.dumps({"include": selected}) + "\n")
               out.write("apps=" + names + "\n")
@@ -148,6 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read   # pacotes do NPM_REGISTRY (GitHub Packages)
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -158,6 +179,8 @@ jobs:
         if: matrix.setup == 'node' || matrix.setup == 'pnpm'
         with:
           node-version: ${{ env.NODE_VERSION }}
+          registry-url: ${{ env.NPM_REGISTRY }}
+          scope: ${{ env.NPM_SCOPE }}
 
       # O lock dos apps é gerado com este npm; o npm mais novo da imagem do
       # runner pode recusar o `npm ci` (mesmo motivo do pin nos Dockerfiles).
@@ -183,6 +206,7 @@ jobs:
         env:
           TEST_CMD: ${{ matrix.test }}
           CI: "true"
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NX_DAEMON: "false"
           NX_NO_CLOUD: "true"
         run: bash -euo pipefail -c "$TEST_CMD"
@@ -223,6 +247,8 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           build-args: ${{ matrix['build-args'] }}
+          secrets: |
+            npm_token=${{ secrets.GITHUB_TOKEN }}
           platforms: linux/amd64
           load: true
           push: false
@@ -280,6 +306,8 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           build-args: ${{ matrix['build-args'] }}
+          secrets: |
+            npm_token=${{ secrets.GITHUB_TOKEN }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -289,8 +317,11 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
   deploy:
-    needs: [plan, build]
-    if: github.event_name != 'pull_request' && needs.plan.outputs.apps != ''
+    needs: [plan, test, build]
+    if: >-
+      always() && github.event_name != 'pull_request' &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') &&
+      needs.plan.outputs.apps != ''
     runs-on: ubuntu-latest
     # Evita dois pushes simultâneos no repo de infra.
     concurrency: infra-${{ github.repository }}
@@ -315,12 +346,14 @@ jobs:
 
       - name: Atualiza image.tag no repo de infra
         run: |
-          TAG="sha-${GITHUB_SHA::7}"
-          for APP in $APPS; do
-            FILE="projects/${INFRA_PROJECT}/apps/${APP}/values-${DEPLOY_ENV}.yaml"
-            yq -i ".image.tag = \"${TAG}\"" "$FILE"
-            echo "→ $FILE: image.tag=${TAG}"
-          done
+          set_tag() {
+            FILE="projects/${INFRA_PROJECT}/apps/$1/values-${DEPLOY_ENV}.yaml"
+            yq -i ".image.tag = \"$2\"" "$FILE"
+            echo "→ $FILE: image.tag=$2"
+            SUMMARY="${SUMMARY:+$SUMMARY }$1@$2"
+          }
+          for APP in $APPS; do set_tag "$APP" "sha-${GITHUB_SHA::7}"; done
+          echo "SUMMARY=$SUMMARY" >> "$GITHUB_ENV"
 
       - name: Commit + push
         run: |
@@ -328,7 +361,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add projects/
           if git diff --cached --quiet; then echo "Nada a atualizar"; exit 0; fi
-          git commit -m "deploy(${INFRA_PROJECT}/${DEPLOY_ENV}): ${APPS} → sha-${GITHUB_SHA::7} [skip ci]"
+          git commit -m "deploy(${INFRA_PROJECT}/${DEPLOY_ENV}): ${SUMMARY} [skip ci]"
           for i in 1 2 3; do
             git pull --rebase origin "$INFRA_BRANCH" && git push origin "HEAD:$INFRA_BRANCH" && exit 0
             sleep $((i * 5))
