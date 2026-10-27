@@ -1,76 +1,103 @@
+# =============================================================================
+# Infra LOCAL do backend (só a sua máquina; develop/prod rodam no Kubernetes).
+# Tudo lê o .env da raiz — o mesmo que os serviços Spring leem no perfil local:
+#
+#   cp .env.example .env
+#   docker compose up -d                      catalog-db, pricing-db, rabbitmq
+#   docker compose --profile order up -d      + order-db      (serviço em construção)
+#   docker compose --profile inventory up -d  + inventory-db  (serviço em construção)
+#
+# Um banco por serviço, como no cluster (lá: um Postgres por ambiente, um
+# database por serviço). README.md → "Variáveis de ambiente".
+# =============================================================================
 name: wlstore
+
+x-postgres: &postgres
+  image: postgres:16-alpine
+  healthcheck:
+    # $$: lido dentro do container, não interpolado pelo compose.
+    test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+    interval: 5s
+    timeout: 5s
+    retries: 20
+    start_period: 30s
 
 services:
   catalog-db:
-    image: postgres:16-alpine
+    <<: *postgres
     container_name: catalog-db
-    env_file:
-      - .env
     ports:
-      - "${CATALOG_DB_PORT}:5432"
+      - "${CATALOG_DB_PORT:?defina no .env}:5432"
     environment:
-      - POSTGRES_USER=${CATALOG_POSTGRES_USER}
-      - POSTGRES_PASSWORD=${CATALOG_POSTGRES_PASSWORD}
-      - POSTGRES_DB=${CATALOG_POSTGRES_DB}
+      POSTGRES_USER: ${CATALOG_POSTGRES_USER:?defina no .env}
+      POSTGRES_PASSWORD: ${CATALOG_POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: ${CATALOG_POSTGRES_DB:?defina no .env}
     volumes:
       - catalogdb-data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${CATALOG_POSTGRES_USER} -d ${CATALOG_POSTGRES_DB}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
 
   pricing-db:
-    image: postgres:16-alpine
+    <<: *postgres
     container_name: pricing-db
-    env_file:
-      - .env
     ports:
-      - "${PRICING_DB_PORT}:5432"
+      - "${PRICING_DB_PORT:?defina no .env}:5432"
     environment:
-      - POSTGRES_USER=${PRICING_POSTGRES_USER}
-      - POSTGRES_PASSWORD=${PRICING_POSTGRES_PASSWORD}
-      - POSTGRES_DB=${PRICING_POSTGRES_DB}
+      POSTGRES_USER: ${PRICING_POSTGRES_USER:?defina no .env}
+      POSTGRES_PASSWORD: ${PRICING_POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: ${PRICING_POSTGRES_DB:?defina no .env}
     volumes:
       - pricingdb-data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${PRICING_POSTGRES_USER} -d ${PRICING_POSTGRES_DB}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
+
+  order-db:
+    <<: *postgres
+    container_name: order-db
+    profiles: [ order ]
+    ports:
+      - "${ORDER_DB_PORT:-5632}:5432"
+    environment:
+      POSTGRES_USER: ${ORDER_POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${ORDER_POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${ORDER_POSTGRES_DB:-orderdb}
+    volumes:
+      - orderdb-data:/var/lib/postgresql/data
+
+  inventory-db:
+    <<: *postgres
+    container_name: inventory-db
+    profiles: [ inventory ]
+    ports:
+      - "${INVENTORY_DB_PORT:-5732}:5432"
+    environment:
+      POSTGRES_USER: ${INVENTORY_POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${INVENTORY_POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${INVENTORY_POSTGRES_DB:-inventorydb}
+    volumes:
+      - inventorydb-data:/var/lib/postgresql/data
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: rabbitmq
+    # Hostname fixo: o RabbitMQ guarda os dados por nome de nó; trocar o
+    # hostname "perde" filas e usuários do volume.
     hostname: 9e6353c96893
-    env_file:
-      - .env
     ports:
-      - "${RABBITMQ_PORT}:5672"       # Porta para comunicação das aplicações com o RabbitMQ
-      - "15672:15672" # Porta para o painel de gerenciamento web
+      - "${RABBITMQ_PORT:?defina no .env}:5672"            # aplicações
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"         # painel web
     environment:
-      - RABBITMQ_NODENAME=rabbit@9e6353c96893
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      RABBITMQ_NODENAME: rabbit@9e6353c96893
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?defina no .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?defina no .env}
     volumes:
       - rabbitmq:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 30s
-    networks:
-      - whitelabel-network
 
 volumes:
   catalogdb-data:
   pricingdb-data:
+  orderdb-data:
+  inventorydb-data:
   rabbitmq:
-
-
-networks:
-  whitelabel-network:
-    driver: bridge

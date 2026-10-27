@@ -1,0 +1,21 @@
+# =============================================================================
+# Perfil local (sua máquina): ativo quando nenhum outro é escolhido.
+# Lê o MESMO .env da raiz que o docker compose usa (copie de .env.example).
+# Os valores depois de ":" valem só sem .env e são os do .env.example.
+# =============================================================================
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]       # rodando da raiz do repo
+      - optional:file:../.env[.properties]    # rodando de dentro do módulo (IDE)
+  datasource:
+    url: jdbc:postgresql://localhost:${PRICING_DB_PORT:5832}/${PRICING_POSTGRES_DB:pricingdb}
+    username: ${PRICING_POSTGRES_USER:admin}
+    password: ${PRICING_POSTGRES_PASSWORD:admin}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:admin}
+  jpa:
+    show-sql: true

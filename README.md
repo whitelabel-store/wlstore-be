@@ -89,7 +89,7 @@ Princípios:
 - `OutboxEvent` **não** usa `@TenantId` de propósito. O relayer não tem requisição, e com o filtro ele só enxergaria eventos do tenant padrão. O tenant viaja na coluna e no payload.
 
 ### Infraestrutura local
-- `docker-compose.yaml` na raiz com RabbitMQ (`5672`, painel em `15672`, guest/guest).
+- `docker-compose.yaml` na raiz: um Postgres por serviço e o RabbitMQ, todos lendo o `.env` (veja [Variáveis de ambiente](#variáveis-de-ambiente)).
 
 ### Testes (17 verdes no catalog-service)
 - Unitários: `ProductServiceImplTest`, `ProductSnapshotTest`, `ProductEventRecorderTest`, `OutboxRelayerTest`, `OutboxEventPublisherTest`.
@@ -137,22 +137,79 @@ Princípios:
 
 ### Pendências menores
 - Trocar `Confirm.isAck()/getReason()` (depreciados) por `ack()/reason()`.
-- Desligar `show-sql` fora dos testes e ajustar o intervalo do relayer por ambiente.
+- Ajustar o intervalo do relayer por ambiente (`application-<perfil>.yaml`).
 - Trocar `@Valid` em `List` por `List<@Valid ...>` (aviso HV000271).
 - Teste de SKIP LOCKED com duas transações concorrentes; teste MockMvc do `TenantFilter`.
 - Substituir os `https://example.com/...` dos tipos de `ProblemDetail`; slug de produto; filtro por preço (depende do pricing).
-- Declarar os demais serviços no `docker-compose.yaml` (hoje só há RabbitMQ; os Postgres ainda não estão no compose).
 
 ## Como rodar localmente
 
 ```bash
-docker compose up -d                 # RabbitMQ
-# Postgres do catalog em localhost:5532/catalogdb (admin/admin)
-mvn -pl catalog-service -am test     # testes (usam Testcontainers, precisam do Docker)
+cp .env.example .env                 # uma vez; ajuste se quiser outras portas/senhas
+docker compose up -d                 # catalog-db, pricing-db, rabbitmq (lendo o .env)
+mvn -pl catalog-service -am test     # testes (Testcontainers, precisam do Docker; não usam o .env)
 mvn -pl catalog-service -am spring-boot:run
+mvn -pl pricing-service -am spring-boot:run
 ```
 
-Swagger do catálogo: `http://localhost:8081/swagger-ui.html`. Toda requisição precisa do header `X-Tenant-Id: <uuid>`.
+Sem flag nenhuma, os serviços sobem no perfil `local` e leem o mesmo `.env`
+do compose. Pela IDE é igual (rodando da raiz ou do módulo).
+
+Swagger: catálogo em `http://localhost:8081/swagger-ui.html`, pricing em
+`http://localhost:8082/swagger-ui.html`. Painel do RabbitMQ:
+`http://localhost:15672`. Toda requisição precisa do header `X-Tenant-Id: <uuid>`.
+
+## Variáveis de ambiente
+
+Três ambientes, um jeito de configurar cada um:
+
+| Ambiente | Perfil Spring | De onde vêm os valores |
+| -------- | ------------- | ---------------------- |
+| **local** (sua máquina) | `local` (padrão: nenhum perfil escolhido) | `.env` na raiz (copiado de `.env.example`), o mesmo do `docker compose` |
+| **develop** (cluster) | `develop` | Kubernetes: values do repo de infra + Secrets gerados pela plataforma |
+| **prod** (cluster) | `prod` | idem; `application-prod.yaml` desliga a tela do Swagger |
+
+Arquivos de config de cada serviço (`src/main/resources/`):
+
+| Arquivo | Vale em | O quê |
+| ------- | ------- | ----- |
+| `application.yaml` | todos | o comum; conexões **só** por variável, sem valor padrão: faltou uma no cluster, o serviço não sobe (em vez de usar senha de exemplo) |
+| `application-local.yaml` | local | importa o `.env`, monta as conexões com `localhost`, liga o `show-sql` |
+| `application-prod.yaml` | prod | só o que muda em produção |
+
+### Variáveis por serviço
+
+| Serviço | Local (`.env`) | develop / prod (Kubernetes) | Origem no cluster |
+| ------- | -------------- | --------------------------- | ----------------- |
+| catalog | `CATALOG_DB_PORT`, `CATALOG_POSTGRES_DB`, `CATALOG_POSTGRES_USER`, `CATALOG_POSTGRES_PASSWORD` | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | Secret `postgres` (banco `catalogdb`) |
+| pricing | `PRICING_DB_PORT`, `PRICING_POSTGRES_DB`, `PRICING_POSTGRES_USER`, `PRICING_POSTGRES_PASSWORD` | idem | Secret `postgres` (banco `pricingdb`) |
+| ambos (eventos) | `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` | `SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_PORT`, `SPRING_RABBITMQ_USERNAME`, `SPRING_RABBITMQ_PASSWORD` | Secret `rabbitmq` |
+| ambos | — | `SPRING_PROFILES_ACTIVE` (`develop`/`prod`) | values (`{{ .Values.app.environment }}`) |
+| ambos | — | `LOGGING_PATTERN_LEVEL` (trace id no log), `JAVA_TOOL_OPTIONS`, `OTEL_*` | values (tracing) |
+| order / inventory (em construção) | `ORDER_*`, `INVENTORY_*` (`docker compose --profile order\|inventory up -d`) | `SPRING_DATASOURCE_*` | quando entrarem no deploy |
+
+No cluster, as senhas são geradas e seladas pela plataforma (`make seal` no
+repo de infra); os values só ligam os nomes:
+`SPRING_DATASOURCE_URL: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/catalogdb"`.
+Nenhuma senha de develop/prod passa por este repo.
+
+### Adicionar uma variável
+
+1. Nome no padrão do Spring (`app.minha-config` → `APP_MINHACONFIG` no ambiente).
+2. Local: valor no `.env.example` (e no seu `.env`), lido em `application-local.yaml`.
+3. Config que muda por ambiente: `env:` nos values do serviço no repo de infra.
+4. Segredo: `projects/wlstore/secrets/<env>.env` no repo de infra + `make seal`;
+   o serviço recebe pelo Secret `app-secrets`.
+5. Sem valor padrão no `application.yaml` para o que é segredo ou conexão.
+
+### Problemas comuns
+
+| Sintoma | Causa | Solução |
+| ------- | ----- | ------- |
+| `docker compose up`: `required variable ... is missing a value` | sem `.env` | `cp .env.example .env` |
+| local: `password authentication failed` | o volume do Postgres foi criado com outra senha (a do `.env` só vale na primeira subida) | use a senha antiga no `.env`, ou recrie: `docker compose down -v` (apaga os dados locais) |
+| no cluster: `Driver org.postgresql.Driver claims to not accept jdbcUrl, ${SPRING_DATASOURCE_URL}` | variável não chegou ao pod | conferir os values e o Secret no repo de infra (`kubectl describe pod`) |
+| app local sobe com perfil errado | `SPRING_PROFILES_ACTIVE` exportado no shell | `unset SPRING_PROFILES_ACTIVE` |
 
 ## Como funciona a mensageria (RabbitMQ)
 

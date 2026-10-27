@@ -1,0 +1,6 @@
+# Perfil prod (SPRING_PROFILES_ACTIVE=prod, posto pela infra). O contrato da API
+# continua em /v3/api-docs (o probe do Kubernetes usa); a tela do Swagger não
+# fica exposta em produção.
+springdoc:
+  swagger-ui:
+    enabled: false

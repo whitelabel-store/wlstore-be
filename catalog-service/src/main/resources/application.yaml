@@ -1,20 +1,37 @@
+# =============================================================================
+# Config comum a todos os ambientes. Conexões e credenciais vêm SÓ de variáveis
+# de ambiente, sem valor padrão: faltou uma no cluster, o app não sobe (melhor
+# que subir com senha de exemplo).
+#
+#   local    application-local.yaml (perfil padrão; lê o .env da raiz)
+#   develop  SPRING_PROFILES_ACTIVE=develop + Secrets da plataforma (infra)
+#   prod     SPRING_PROFILES_ACTIVE=prod    + application-prod.yaml
+#
+# Tabela de variáveis: README.md → "Variáveis de ambiente".
+# =============================================================================
 spring:
   application:
     name: catalog-service
+  profiles:
+    default: local          # sem SPRING_PROFILES_ACTIVE (IDE, mvn spring-boot:run, testes)
   threads:
     virtual:
       enabled: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5532/catalogdb}
-    username: ${SPRING_DATASOURCE_USERNAME:admin}
-    password: ${SPRING_DATASOURCE_PASSWORD:admin}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: true
+      ddl-auto: validate    # o schema é do Flyway
+    show-sql: false
     open-in-view: false
   rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
     publisher-confirm-type: correlated
     listener:
       simple:
@@ -30,6 +47,7 @@ spring:
         default-page-size: 10
         max-page-size: 100
         one-indexed-parameters: false
+
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -37,21 +55,6 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
     tagsSorter: alpha
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-
-app:
-  maintenance:
-    message: "System Operation: Version 1.1"
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "refresh, health"
 
 server:
   port: 8081
