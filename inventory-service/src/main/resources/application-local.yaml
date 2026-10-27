@@ -1,0 +1,13 @@
+# Perfil local (padrão): lê o .env da raiz, o mesmo do docker compose
+# (docker compose --profile inventory up -d sobe o banco deste serviço).
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${INVENTORY_DB_PORT:5732}/${INVENTORY_POSTGRES_DB:inventorydb}
+    username: ${INVENTORY_POSTGRES_USER:admin}
+    password: ${INVENTORY_POSTGRES_PASSWORD:admin}
+  jpa:
+    show-sql: true

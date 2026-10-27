@@ -1,18 +1,23 @@
+# Config comum a todos os ambientes; conexão e credenciais SÓ por variável de
+# ambiente (sem padrão). Local: application-local.yaml (perfil padrão, lê o .env
+# da raiz). README.md → "Variáveis de ambiente".
 spring:
   application:
     name: order-service
+  profiles:
+    default: local
   threads:
     virtual:
       enabled: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5632/orderdb}
-    username: ${SPRING_DATASOURCE_USERNAME:admin}
-    password: ${SPRING_DATASOURCE_PASSWORD:admin}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
 #  security:
 #    oauth2:
 #      resourceserver:
@@ -24,11 +29,6 @@ spring:
         default-page-size: 10
         max-page-size: 100
         one-indexed-parameters: false
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
 
 springdoc:
   api-docs:

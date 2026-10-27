@@ -1,0 +1,20 @@
+# Perfil local (padrão): lê o .env da raiz, o mesmo do docker compose
+# (docker compose --profile order up -d sobe o banco deste serviço).
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${ORDER_DB_PORT:5632}/${ORDER_POSTGRES_DB:orderdb}
+    username: ${ORDER_POSTGRES_USER:admin}
+    password: ${ORDER_POSTGRES_PASSWORD:admin}
+  jpa:
+    show-sql: true
+
+# Eureka só existe localmente (discovery-server); no Kubernetes quem descobre
+# serviços é o DNS do cluster.
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
