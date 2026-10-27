@@ -16,7 +16,7 @@ x-postgres: &postgres
   image: postgres:16-alpine
   healthcheck:
     # $$: lido dentro do container, não interpolado pelo compose.
-    test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+    test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
     interval: 5s
     timeout: 5s
     retries: 20
@@ -50,7 +50,7 @@ services:
   order-db:
     <<: *postgres
     container_name: order-db
-    profiles: [ order ]
+    profiles: [order]
     ports:
       - "${ORDER_DB_PORT:-5632}:5432"
     environment:
@@ -63,7 +63,7 @@ services:
   inventory-db:
     <<: *postgres
     container_name: inventory-db
-    profiles: [ inventory ]
+    profiles: [inventory]
     ports:
       - "${INVENTORY_DB_PORT:-5732}:5432"
     environment:
@@ -80,8 +80,8 @@ services:
     # hostname "perde" filas e usuários do volume.
     hostname: 9e6353c96893
     ports:
-      - "${RABBITMQ_PORT:?defina no .env}:5672"            # aplicações
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"         # painel web
+      - "${RABBITMQ_PORT:?defina no .env}:5672" # aplicações
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672" # painel web
     environment:
       RABBITMQ_NODENAME: rabbit@9e6353c96893
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?defina no .env}
@@ -89,7 +89,7 @@ services:
     volumes:
       - rabbitmq:/var/lib/rabbitmq
     healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
