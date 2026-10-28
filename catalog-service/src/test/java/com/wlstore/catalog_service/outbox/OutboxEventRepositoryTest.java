@@ -2,6 +2,7 @@ package com.wlstore.catalog_service.outbox;
 
 import com.wlstore.catalog_service.AbstractIntegrationTest;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,13 @@ class OutboxEventRepositoryTest extends AbstractIntegrationTest {
 
     @Autowired
     EntityManager entityManager;
+
+    // Ver ProductOutboxIntegrationTest: só contam os eventos deste teste.
+    // A classe é @Transactional: a limpeza é desfeita no fim de cada teste.
+    @BeforeEach
+    void emptyOutbox() {
+        repository.deleteAllInBatch();
+    }
 
     @Test
     void savesAndReadsBackJsonPayload() {
