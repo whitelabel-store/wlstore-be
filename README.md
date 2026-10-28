@@ -159,6 +159,35 @@ Swagger: catálogo em `http://localhost:8081/swagger-ui.html`, pricing em
 `http://localhost:8082/swagger-ui.html`. Painel do RabbitMQ:
 `http://localhost:15672`. Toda requisição precisa do header `X-Tenant-Id: <uuid>`.
 
+## Dados de demonstração (seed)
+
+Categorias e produtos chegam de jeitos diferentes:
+
+| O quê | Como | Onde vale |
+| ----- | ---- | --------- |
+| árvore de categorias | migration do Flyway (`V6__seed_categories.sql`) | todo banco novo, sozinho |
+| produtos de demonstração | `scripts/seed-demo.sh`, pela API, a partir de `seed/demo-catalog.json` | quando você roda |
+
+Produto é dado, não código: não entra no build nem na imagem. Banco novo
+(local, develop, prod) começa só com as categorias.
+
+```bash
+scripts/seed-demo.sh local      # backend local rodando (8081/8082)
+scripts/seed-demo.sh develop    # cluster (precisa do make hosts da infra)
+scripts/seed-demo.sh prod       # pede confirmação
+```
+
+- Cadastra **pela API**: criar produto publica o evento que o pricing
+  consome, como no painel. SQL direto pularia esse fluxo.
+- Pode rodar de novo: produto que já existe (pelo título) é pulado; o preço é
+  regravado.
+- No arquivo, a categoria é o **caminho de títulos**
+  (`Tecnologia > Eletrônicos, Áudio e Vídeo > Fones de Ouvido`), porque os
+  ids mudam a cada banco. Árvores que não vêm da migration ficam em
+  `categories` e são criadas se a raiz não existir.
+- No cluster, depois de cadastrados, os produtos entram no backup do banco e
+  voltam num `make destroy && make setup` da infra.
+
 ## Variáveis de ambiente
 
 Três ambientes, um jeito de configurar cada um:
