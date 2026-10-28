@@ -1,0 +1,164 @@
+{
+  "_comment": "Catálogo de demonstração (local/develop). Produtos referenciam a categoria pelo CAMINHO de títulos (os ids mudam a cada banco). Preço em centavos, por variante (vai para o pricing-service). Uso: scripts/seed-demo.sh <local|develop|prod>",
+  "categories": [
+    {
+      "title": "Acessorios",
+      "children": [
+        {
+          "title": "Acessorios para Celular",
+          "children": [
+            {
+              "title": "Capas e Cases",
+              "children": [
+                {
+                  "title": "Capas de Silicone"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "title": "Redmi 18 Pro",
+      "brand": "Xiaomi",
+      "description": "Lorem Ipsum Dolor Sit",
+      "status": "ACTIVE",
+      "category": "Acessorios",
+      "variants": [
+        {
+          "sku": "REDMI18-128-BLK",
+          "name": "Redmi 18 128GB Preto",
+          "optionValues": {
+            "color": "Preto",
+            "storage": "128GB"
+          },
+          "weightGrams": 200,
+          "status": "ACTIVE",
+          "position": 0,
+          "price": {
+            "amountCents": 9000,
+            "originalAmountCents": 10000
+          }
+        }
+      ],
+      "images": [
+        {
+          "url": "https://example.com/redmi-18-front.png",
+          "altText": "Frente",
+          "position": 0,
+          "primaryImage": true
+        }
+      ]
+    },
+    {
+      "title": "Fone sem fio Soundcore Space One com cancelamento de ruído",
+      "brand": "Anker",
+      "description": "Fone sem fio Soundcore Space One com cancelamento de ruído. Produto de exemplo da vitrine.",
+      "status": "ACTIVE",
+      "category": "Tecnologia > Eletrônicos, Áudio e Vídeo > Fones de Ouvido",
+      "variants": [
+        {
+          "sku": "ANKER-SPACEONE-PT",
+          "name": "Fone sem fio Soundcore Space One com cancelamento de ruído",
+          "optionValues": {
+            "color": "Preto"
+          },
+          "status": "ACTIVE",
+          "position": 0,
+          "price": {
+            "amountCents": 79900
+          }
+        }
+      ]
+    },
+    {
+      "title": "Capa de silicone anti-impacto para Redmi 18 Pro",
+      "brand": "Pulse",
+      "description": "Capa de silicone anti-impacto para Redmi 18 Pro. Produto de exemplo da vitrine.",
+      "status": "ACTIVE",
+      "category": "Acessorios > Acessorios para Celular > Capas e Cases > Capas de Silicone",
+      "variants": [
+        {
+          "sku": "PULSE-CAPA-R18P-VD",
+          "name": "Capa de silicone anti-impacto para Redmi 18 Pro",
+          "optionValues": {
+            "color": "Verde-água"
+          },
+          "status": "ACTIVE",
+          "position": 0,
+          "price": {
+            "amountCents": 6990
+          }
+        }
+      ]
+    },
+    {
+      "title": "Fone de ouvido intra-auricular sem fio Redmi Buds 6 Play",
+      "brand": "Xiaomi",
+      "description": "Fone de ouvido intra-auricular sem fio Redmi Buds 6 Play. Produto de exemplo da vitrine.",
+      "status": "ACTIVE",
+      "category": "Tecnologia > Eletrônicos, Áudio e Vídeo > Fones de Ouvido",
+      "variants": [
+        {
+          "sku": "XIAOMI-BUDS6PLAY-BR",
+          "name": "Fone de ouvido intra-auricular sem fio Redmi Buds 6 Play",
+          "optionValues": {
+            "color": "Branco"
+          },
+          "status": "ACTIVE",
+          "position": 0,
+          "price": {
+            "amountCents": 12900
+          }
+        }
+      ]
+    },
+    {
+      "title": "Redmi Watch 5 Active com GPS",
+      "brand": "Xiaomi",
+      "description": "Redmi Watch 5 Active com GPS. Produto de exemplo da vitrine.",
+      "status": "ACTIVE",
+      "category": "Tecnologia > Eletrônicos, Áudio e Vídeo > Smartwatches",
+      "variants": [
+        {
+          "sku": "XIAOMI-WATCH5A-PT",
+          "name": "Redmi Watch 5 Active com GPS",
+          "optionValues": {
+            "color": "Preto"
+          },
+          "status": "ACTIVE",
+          "position": 0,
+          "price": {
+            "amountCents": 29900
+          }
+        }
+      ]
+    },
+    {
+      "title": "Cabo USB-C trançado de 2 m com carga rápida 100 W",
+      "brand": "Baseus",
+      "description": "Cabo USB-C trançado de 2 m com carga rápida 100 W. Produto de exemplo da vitrine.",
+      "status": "ACTIVE",
+      "category": "Tecnologia > Celulares e Telefones > Acessórios para Celulares",
+      "variants": [
+        {
+          "sku": "BASEUS-USBC-2M-PT",
+          "name": "Cabo USB-C trançado de 2 m com carga rápida 100 W",
+          "optionValues": {
+            "color": "Preto",
+            "length": "2 m"
+          },
+          "status": "ACTIVE",
+          "position": 0,
+          "price": {
+            "amountCents": 5990,
+            "originalAmountCents": 7990
+          }
+        }
+      ]
+    }
+  ]
+}
