@@ -146,7 +146,7 @@ Princípios:
 
 ```bash
 cp .env.example .env                 # uma vez; ajuste se quiser outras portas/senhas
-docker compose up -d                 # catalog-db, pricing-db, rabbitmq (lendo o .env)
+docker compose up -d                 # catalog-db, pricing-db, order-db, inventory-db, rabbitmq (lendo o .env)
 mvn -pl catalog-service -am test     # testes (Testcontainers, precisam do Docker; não usam o .env)
 mvn -pl catalog-service -am spring-boot:run
 mvn -pl pricing-service -am spring-boot:run
@@ -210,7 +210,8 @@ Arquivos de config de cada serviço (`src/main/resources/`):
 | ambos (eventos) | `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` | `SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_PORT`, `SPRING_RABBITMQ_USERNAME`, `SPRING_RABBITMQ_PASSWORD` | Secret `rabbitmq` |
 | ambos | — | `SPRING_PROFILES_ACTIVE` (`develop`/`prod`) | values (`{{ .Values.app.environment }}`) |
 | ambos | — | `LOGGING_PATTERN_LEVEL` (trace id no log), `JAVA_TOOL_OPTIONS`, `OTEL_*` | values (tracing) |
-| order / inventory (em construção) | `ORDER_*`, `INVENTORY_*` (`docker compose --profile order\|inventory up -d`) | `SPRING_DATASOURCE_*` | quando entrarem no deploy |
+| order | `ORDER_DB_PORT`, `ORDER_POSTGRES_DB`, `ORDER_POSTGRES_USER`, `ORDER_POSTGRES_PASSWORD` | `SPRING_DATASOURCE_*` | quando entrar no deploy |
+| inventory | `INVENTORY_DB_PORT`, `INVENTORY_POSTGRES_DB`, `INVENTORY_POSTGRES_USER`, `INVENTORY_POSTGRES_PASSWORD` | `SPRING_DATASOURCE_*` | quando entrar no deploy |
 
 No cluster, as senhas são geradas e seladas pela plataforma (`make seal` no
 repo de infra); os values só ligam os nomes:
