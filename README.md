@@ -161,32 +161,27 @@ Swagger: catálogo em `http://localhost:8081/swagger-ui.html`, pricing em
 
 ## Dados de demonstração (seed)
 
-Categorias e produtos chegam de jeitos diferentes:
+Categoria e produto chegam do mesmo jeito: migration do Flyway, igual ao resto
+do schema. Banco novo (local, develop, prod) já nasce com os dois.
 
-| O quê | Como | Onde vale |
-| ----- | ---- | --------- |
-| árvore de categorias | migration do Flyway (`V6__seed_categories.sql`) | todo banco novo, sozinho |
-| produtos de demonstração | `scripts/seed-demo.sh`, pela API, a partir de `seed/demo-catalog.json` | quando você roda |
+| O quê | Migration |
+| ----- | --------- |
+| árvore de categorias | `catalog-service/.../V6__seed_categories.sql` |
+| produtos de demonstração | `catalog-service/.../V7__seed_products.sql` |
+| preço dos produtos acima | `pricing-service/.../V5__seed_prices.sql` |
 
-Produto é dado, não código: não entra no build nem na imagem. Banco novo
-(local, develop, prod) começa só com as categorias.
+Produto cadastrado pela API publica um evento que o pricing-service consome
+para aprender o SKU (`tb_known_sku`) antes de aceitar preço — é assim que o
+painel funciona. A migration pula esse fluxo (SQL direto, sem RabbitMQ), então
+`V7__seed_products.sql` e `V5__seed_prices.sql` usam os **mesmos ids fixos**
+de produto/SKU nos dois serviços para ficar consistente: a V5 do pricing
+replica à mão o que o evento teria feito. Mudou produto/SKU numa, muda a
+outra junto.
 
-```bash
-scripts/seed-demo.sh local      # backend local rodando (8081/8082)
-scripts/seed-demo.sh develop    # cluster (precisa do make hosts da infra)
-scripts/seed-demo.sh prod       # pede confirmação
-```
-
-- Cadastra **pela API**: criar produto publica o evento que o pricing
-  consome, como no painel. SQL direto pularia esse fluxo.
-- Pode rodar de novo: produto que já existe (pelo título) é pulado; o preço é
-  regravado.
-- No arquivo, a categoria é o **caminho de títulos**
-  (`Tecnologia > Eletrônicos, Áudio e Vídeo > Fones de Ouvido`), porque os
-  ids mudam a cada banco. Árvores que não vêm da migration ficam em
-  `categories` e são criadas se a raiz não existir.
-- No cluster, depois de cadastrados, os produtos entram no backup do banco e
-  voltam num `make destroy && make setup` da infra.
+Migration só roda uma vez por banco (Flyway cobra checksum); pra reaplicar
+depois de editar, reseta o volume do Postgres daquele serviço
+(`docker compose down -v` ou `docker volume rm` do `catalogdb-data`/
+`pricingdb-data`) e sobe de novo.
 
 ## Variáveis de ambiente
 
