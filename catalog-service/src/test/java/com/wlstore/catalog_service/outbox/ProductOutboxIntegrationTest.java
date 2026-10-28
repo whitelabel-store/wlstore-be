@@ -8,6 +8,7 @@ import com.wlstore.catalog_service.dto.ProductVariantRequestDTO;
 import com.wlstore.catalog_service.model.Category;
 import com.wlstore.catalog_service.repository.CategoryRepository;
 import com.wlstore.catalog_service.service.ProductService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,14 @@ class ProductOutboxIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     OutboxEventRepository outboxEventRepository;
+
+    // Outros testes de integração (listagem, ordenação) criam produtos com commit
+    // no mesmo banco e deixam eventos no outbox; aqui só contam os deste teste.
+    // A classe é @Transactional: a limpeza é desfeita no fim de cada teste.
+    @BeforeEach
+    void emptyOutbox() {
+        outboxEventRepository.deleteAllInBatch();
+    }
 
     @Test
     void createWritesProductCreatedEventToOutbox() {

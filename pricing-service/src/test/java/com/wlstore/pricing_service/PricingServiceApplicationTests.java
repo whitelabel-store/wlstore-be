@@ -13,6 +13,6 @@ class PricingServiceApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoadsAndAllMigrationsAreApplied() {
-		assertThat(flyway.info().applied()).hasSize(4);
+		assertThat(flyway.info().applied()).hasSize(5);
 	}
 }
