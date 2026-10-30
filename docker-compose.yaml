@@ -3,12 +3,12 @@
 # Tudo lê o .env da raiz — o mesmo que os serviços Spring leem no perfil local:
 #
 #   cp .env.example .env
-#   docker compose up -d                      catalog-db, pricing-db, rabbitmq
-#   docker compose --profile order up -d      + order-db      (serviço em construção)
-#   docker compose --profile inventory up -d  + inventory-db  (serviço em construção)
+#   docker compose up -d   catalog-db, pricing-db, order-db, inventory-db, rabbitmq
 #
-# Um banco por serviço, como no cluster (lá: um Postgres por ambiente, um
-# database por serviço). README.md → "Variáveis de ambiente".
+# Os serviços em si (catalog-service, order-service etc.) NÃO sobem aqui —
+# rodam via `mvn -pl <serviço> spring-boot:run` na sua máquina, lendo o mesmo
+# .env. Um banco por serviço, como no cluster (lá: um Postgres por ambiente,
+# um database por serviço). README.md → "Variáveis de ambiente".
 # =============================================================================
 name: wlstore
 
@@ -50,26 +50,24 @@ services:
   order-db:
     <<: *postgres
     container_name: order-db
-    profiles: [order]
     ports:
-      - "${ORDER_DB_PORT:-5632}:5432"
+      - "${ORDER_DB_PORT:?defina no .env}:5432"
     environment:
-      POSTGRES_USER: ${ORDER_POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${ORDER_POSTGRES_PASSWORD:-admin}
-      POSTGRES_DB: ${ORDER_POSTGRES_DB:-orderdb}
+      POSTGRES_USER: ${ORDER_POSTGRES_USER:?defina no .env}
+      POSTGRES_PASSWORD: ${ORDER_POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: ${ORDER_POSTGRES_DB:?defina no .env}
     volumes:
       - orderdb-data:/var/lib/postgresql/data
 
   inventory-db:
     <<: *postgres
     container_name: inventory-db
-    profiles: [inventory]
     ports:
-      - "${INVENTORY_DB_PORT:-5732}:5432"
+      - "${INVENTORY_DB_PORT:?defina no .env}:5432"
     environment:
-      POSTGRES_USER: ${INVENTORY_POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${INVENTORY_POSTGRES_PASSWORD:-admin}
-      POSTGRES_DB: ${INVENTORY_POSTGRES_DB:-inventorydb}
+      POSTGRES_USER: ${INVENTORY_POSTGRES_USER:?defina no .env}
+      POSTGRES_PASSWORD: ${INVENTORY_POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: ${INVENTORY_POSTGRES_DB:?defina no .env}
     volumes:
       - inventorydb-data:/var/lib/postgresql/data
 

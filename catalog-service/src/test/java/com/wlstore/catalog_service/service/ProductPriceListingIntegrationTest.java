@@ -8,10 +8,12 @@ import com.wlstore.catalog_service.dto.ProductResponseDTO;
 import com.wlstore.catalog_service.dto.ProductVariantRequestDTO;
 import com.wlstore.catalog_service.model.Category;
 import com.wlstore.catalog_service.model.VariantPrice;
+import com.wlstore.catalog_service.outbox.OutboxEventRepository;
 import com.wlstore.catalog_service.repository.CategoryRepository;
 import com.wlstore.catalog_service.repository.VariantPriceRepository;
 import com.wlstore.common.tenant.TenantContext;
 import com.wlstore.common.web.PageResponseDTO;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,17 @@ class ProductPriceListingIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     VariantPriceRepository variantPriceRepository;
+
+    @Autowired
+    OutboxEventRepository outboxEventRepository;
+
+    // Esta classe não é @Transactional: os produtos criados aqui são commitados.
+    // Ficam isolados no tenant aleatório, mas o evento de cada um vai para o
+    // outbox, que é global: limpa para não contaminar os testes do outbox.
+    @AfterEach
+    void cleanOutbox() {
+        outboxEventRepository.deleteAllInBatch();
+    }
 
     // ---------- C3a: show the "from" price ----------
 
