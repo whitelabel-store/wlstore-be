@@ -138,6 +138,9 @@ public class ProductServiceImpl implements ProductService {
 
         eventRecorder.record(ProductEventRecorder.PRODUCT_DELETED, product);
 
+        // O preço copiado do pricing não tem FK para o produto: sem isto a linha fica órfã e
+        // segura o SKU (uk_variant_price_tenant_sku) para sempre.
+        variantPriceRepository.deleteByProductId(product.getId());
         productRepository.delete(product);
     }
 
@@ -208,7 +211,19 @@ public class ProductServiceImpl implements ProductService {
             requestedSkus.add(dto.sku());
         }
 
-        product.getVariants().removeIf(variant -> !requestedSkus.contains(variant.getSku()));
+        Set<String> removedSkus = new HashSet<>();
+        product.getVariants().removeIf(variant -> {
+            boolean removed = !requestedSkus.contains(variant.getSku());
+            if (removed) {
+                removedSkus.add(variant.getSku());
+            }
+            return removed;
+        });
+
+        // Variant removida leva junto o preço copiado, senão ele ainda conta no "a partir de" da listagem.
+        if (!removedSkus.isEmpty()) {
+            variantPriceRepository.deleteByProductIdAndSkuIn(product.getId(), removedSkus);
+        }
 
         Map<String, ProductVariant> existing = new HashMap<>();
         for (ProductVariant variant : product.getVariants()) {
