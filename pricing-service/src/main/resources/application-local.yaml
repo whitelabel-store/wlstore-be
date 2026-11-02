@@ -17,9 +17,5 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:admin}
     password: ${RABBITMQ_PASSWORD:admin}
-  flyway:
-    # db/seed = produtos/preços de demonstração. Só local e develop; prod não
-    # recebe dado de exemplo (lá o catálogo vem da API). README → "Dados de demonstração".
-    locations: classpath:db/migration,classpath:db/seed
   jpa:
     show-sql: true
