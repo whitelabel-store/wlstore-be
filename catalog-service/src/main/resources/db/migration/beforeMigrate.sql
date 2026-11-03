@@ -1,0 +1,246 @@
+-- Callback do Flyway (roda antes de toda migrate; não é migration e não tem versão).
+--
+-- Prepara o banco para a V7__seed_products num ambiente que já tinha os produtos de
+-- demonstração cadastrados pela API (o antigo scripts/seed-demo.sh, rodado em prod e
+-- develop antes da V7 existir). Esses produtos têm os mesmos títulos/SKUs da V7, mas ids
+-- aleatórios: sem esta limpeza a V7 bate em uk_product_tenant_title e o serviço não sobe.
+--
+-- Só age ENQUANTO a V7 não foi aplicada; depois disso é no-op para sempre (um produto
+-- recadastrado com título do seed não é apagado). Banco novo: nada a apagar.
+-- O pricing-service tem o callback equivalente para a V5__seed_prices.
+-- Gerado a partir da V7: se ela mudar títulos/SKUs, atualizar as listas abaixo.
+
+DO $$
+DECLARE
+    v_tenant uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    v_titles text[] := ARRAY[
+        'Cabo USB-C trançado de 2 m com carga rápida 100 W',
+        'Capa de silicone anti-impacto para Redmi 18 Pro',
+        'Fone de ouvido intra-auricular sem fio Redmi Buds 6 Play',
+        'Fone sem fio Soundcore Space One com cancelamento de ruído',
+        'Redmi 18 Pro',
+        'Redmi Watch 5 Active com GPS',
+        'Galaxy A55 5G 256GB',
+        'Tela de reposição AMOLED para Galaxy S23',
+        'Notebook Inspiron 15 i5 16GB 512GB SSD',
+        'Notebook IdeaPad 3 Ryzen 5 8GB 256GB SSD',
+        'SSD NVMe 1TB NV2',
+        'Tab A9+ 128GB Wi-Fi',
+        'Tab M11 TB330 128GB',
+        'Mouse sem fio MX Anywhere 3',
+        'Impressora multifuncional tanque de tinta Ecotank',
+        'Câmera mirrorless EOS R50 com lente 18-45mm',
+        'Câmera de ação Hero 12 Black',
+        'Tripé de alumínio 1,6m com cabeça de vídeo',
+        'Filmadora Handycam FDR-AX43',
+        'Caixa de som Bluetooth Flip 6 à prova d’água',
+        'Amazfit Bip 5 GPS tela 1.91"',
+        'Soundbar 2.1 canais com subwoofer sem fio',
+        'Console PlayStation 5 Slim 1TB',
+        'Console Xbox Series S 512GB',
+        'Controle sem fio DualSense',
+        'Smart TV 55" 4K UHD Google TV',
+        'Smart TV 43" Full HD com Roku TV',
+        'Suporte articulado para TV 32" a 70"',
+        'Geladeira Frost Free Duplex 400L',
+        'Geladeira Frost Free Inverse 490L',
+        'Fogão 5 bocas com forno autolimpante',
+        'Lavadora de roupas 12kg Turbo Economia',
+        'Lava e seca 11kg/7kg',
+        'Estante escritório 5 prateleiras',
+        'Rack para TV até 55" com nichos',
+        'Lâmpada LED inteligente Wi-Fi RGB',
+        'Luminária pendente industrial',
+        'Conjunto de panelas antiaderente 5 peças',
+        'Ventilador de coluna 40cm com controle remoto',
+        'Climatizador de ar evaporativo 3L',
+        'Ar-condicionado Split 12000 BTUs Inverter',
+        'Ar-condicionado Split 9000 BTUs Quente/Frio',
+        'Camiseta básica algodão pima',
+        'Camiseta estampada manga curta',
+        'Calça jeans slim fit',
+        'Calça jogger sarja',
+        'Tênis de corrida Revolution 7',
+        'Tênis casual Attack Masculino',
+        'Vestido midi de alfaiataria',
+        'Vestido floral manga longa',
+        'Blusa de tricô canelada',
+        'Blusa cropped manga curta',
+        'Sandália rasteira em couro',
+        'Tênis casual plataforma',
+        'Bolsa tiracolo em couro sintético',
+        'Mochila casual com compartimento notebook',
+        'Óculos de sol polarizado aviador',
+        'Óculos de sol quadrado acetato',
+        'Relógio digital esportivo com cronômetro',
+        'Relógio analógico aço inoxidável',
+        'Kit de halteres emborrachados 2x5kg',
+        'Whey protein concentrado 900g',
+        'Creatina monohidratada 300g',
+        'Bicicleta aro 29 MTB 21 marchas',
+        'Bicicleta speed aro 700 alumínio',
+        'Capacete ciclismo com led traseiro',
+        'Barraca de camping 4 pessoas impermeável',
+        'Saco de dormir até 5°C',
+        'Mochila de trilha 50L com cobertura de chuva',
+        'Bastão retrátil de trekking (par)',
+        'Eau de Parfum floral 75ml',
+        'Eau de Toilette cítrico 100ml',
+        'Eau de Parfum amadeirado 100ml',
+        'Deo Colônia esportivo 100ml',
+        'Hidratante corporal nutritivo 400ml',
+        'Creme facial hidratante noturno 50g',
+        'Protetor solar facial FPS 60',
+        'Protetor solar corporal FPS 30',
+        'Shampoo hidratação intensa 400ml',
+        'Condicionador reconstrução 350ml',
+        'Secador de cabelo profissional 2100W',
+        'Boneca com acessórios e cabelo para pentear',
+        'Boneco de ação articulado 30cm',
+        'Quebra-cabeça 500 peças paisagem',
+        'Jogo de tabuleiro Detetive',
+        'Fraldas descartáveis tamanho M pacote 44un',
+        'Lenços umedecidos pacote 192un',
+        'Carrinho de bebê travel system',
+        'Cadeira para auto 0-18kg',
+        'Torto Arado',
+        'Grande Sertão: Veredas',
+        'O Apanhador no Campo de Centeio',
+        'Estojo de canetinhas 24 cores',
+        'Caderno universitário 10 matérias',
+        'Caneta esferográfica pacote 50un',
+        'Placa de vídeo RTX 4060 8GB',
+        'Hub USB-C 7 em 1',
+        'Cooktop 5 bocas a gás com acendimento automático',
+        'Jogo de facas em aço inox 6 peças',
+        '1984'
+    ];
+    v_skus text[] := ARRAY[
+        'BASEUS-USBC-2M-PT',
+        'PULSE-CAPA-R18P-VD',
+        'XIAOMI-BUDS6PLAY-BR',
+        'ANKER-SPACEONE-PT',
+        'REDMI18-128-BLK',
+        'XIAOMI-WATCH5A-PT',
+        'SAMSUNG-GALAXY-A55-5G',
+        'IWILL-TELA-DE',
+        'DELL-NOTEBOOK',
+        'LENOVO-NOTEBOOK-IDEAPAD',
+        'KINGSTON-SSD-NVME-1TB-NV2',
+        'SAMSUNG-TAB-A9-128GB-WI',
+        'LENOVO-TAB-M11-TB330',
+        'LOGITECH-MOUSE-SEM-FIO-MX',
+        'EPSON-IMPRESSORA',
+        'CANON-CAMERA',
+        'GOPRO-CAMERA-DE-ACAO',
+        'VIVITAR-TRIPE-DE',
+        'SONY-FILMADORA',
+        'JBL-CAIXA-DE-SOM',
+        'AMAZFIT-AMAZFIT-BIP-5',
+        'AOC-SOUNDBAR-2-1',
+        'SONY-CONSOLE',
+        'MICROSOFT-CONSOLE-XBOX',
+        'SONY-CONTROLE-SEM-FIO',
+        'TCL-SMART-TV-55-4K',
+        'PHILCO-SMART-TV-43-FULL',
+        'BRASFORMA-SUPORTE',
+        'BRASTEMP-GELADEIRA-FROST',
+        'ELECTROLUX-GELADEIRA-FROST',
+        'ATLAS-FOGAO-5-BOCAS',
+        'ELECTROLUX-LAVADORA-DE',
+        'BRASTEMP-LAVA-E-SECA-11KG',
+        'MADESA-ESTANTE',
+        'RUDNICK-RACK-PARA-TV-ATE',
+        'TASCHIBRA-LAMPADA-LED',
+        'TASCHIBRA-LUMINARIA',
+        'TRAMONTINA-CONJUNTO-DE',
+        'MONDIAL-VENTILADOR-DE',
+        'BRITANIA-CLIMATIZADOR-DE',
+        'MIDEA-AR-CONDICIONADO',
+        'LG-AR-CONDICIONADO',
+        'HERING-CAMISETA-BASICA',
+        'MALWEE-CAMISETA',
+        'HERING-CALCA-JEANS-SLIM',
+        'MALWEE-CALCA-JOGGER',
+        'NIKE-TENIS-DE-CORRIDA',
+        'OLYMPIKUS-TENIS-CASUAL',
+        'ZINCO-VESTIDO-MIDI-DE',
+        'FARM-RIO-VESTIDO-FLORAL',
+        'HERING-BLUSA-DE-TRICO',
+        'COLCCI-BLUSA-CROPPED',
+        'VIZZANO-SANDALIA',
+        'AREZZO-TENIS-CASUAL',
+        'SCHUTZ-BOLSA-TIRACOLO',
+        'CAPODARTE-MOCHILA-CASUAL',
+        'RAY-BAN-OCULOS-DE-SOL',
+        'CHILLI-BEANS-OCULOS-DE-SOL',
+        'TECHNOS-RELOGIO-DIGITAL',
+        'MORMAII-RELOGIO',
+        'OXER-KIT-DE-HALTERES',
+        'GROWTH-WHEY-PROTEIN',
+        'MAX-TITANIUM-CREATINA',
+        'CALOI-BICICLETA-ARO-29',
+        'OGGI-BICICLETA-SPEED',
+        'HIGH-ONE-CAPACETE',
+        'NAUTIKA-BARRACA-DE',
+        'GUEPARDO-SACO-DE-DORMIR',
+        'NAUTIKA-MOCHILA-DE',
+        'GUEPARDO-BASTAO-RETRATIL',
+        'O-BOTICARIO-EAU-DE-PARFUM',
+        'NATURA-EAU-DE-TOILETTE',
+        'O-BOTICARIO-EAU-DE-PARFUM-2',
+        'NATURA-DEO-COLONIA',
+        'NIVEA-HIDRATANTE',
+        'NATURA-CREME-FACIAL',
+        'LA-ROCHE-POSAY-PROTETOR-SOLAR',
+        'SUNDOWN-PROTETOR-SOLAR',
+        'PANTENE-SHAMPOO',
+        'SEDA-CONDICIONADOR',
+        'TAIFF-SECADOR-DE',
+        'ESTRELA-BONECA-COM',
+        'MATTEL-BONECO-DE-ACAO',
+        'GROW-QUEBRA-CABECA',
+        'GROW-JOGO-DE',
+        'PAMPERS-FRALDAS',
+        'HUGGIES-LENCOS',
+        'BURIGOTTO-CARRINHO-DE-BEBE',
+        'GALZERANO-CADEIRA-PARA',
+        'COMPANHIA-DAS-TORTO-ARADO',
+        'COMPANHIA-DAS-GRANDE-SERTAO',
+        'EDITORA-O-APANHADOR-NO',
+        'FABER-CASTELL-ESTOJO-DE',
+        'TILIBRA-CADERNO',
+        'BIC-CANETA',
+        'XFX-PLACA-DE-VIDEO',
+        'MULTILASER-HUB-USB-C-7-EM-1',
+        'BRASTEMP-COOKTOP-5-BOCAS',
+        'TRAMONTINA-JOGO-DE-FACAS-EM',
+        'EDITORA-1984'
+    ];
+    v_products uuid[];
+BEGIN
+    -- Tudo no schema que o Flyway está migrando (current_schema): nome solto resolveria
+    -- pelo search_path e podia cair em OUTRO schema que já tem as tabelas.
+    IF to_regclass(format('%I.flyway_schema_history', current_schema())) IS NULL
+       OR to_regclass(format('%I.tb_product', current_schema())) IS NULL
+       OR to_regclass(format('%I.tb_variant_price', current_schema())) IS NULL THEN
+        RETURN;
+    END IF;
+    IF EXISTS (SELECT 1 FROM flyway_schema_history WHERE version = '7' AND success) THEN
+        RETURN;
+    END IF;
+
+    SELECT coalesce(array_agg(id), '{}') INTO v_products
+    FROM tb_product WHERE tenant_id = v_tenant AND title = ANY (v_titles);
+
+    -- sem ON DELETE CASCADE no schema: filhos antes do produto
+    DELETE FROM tb_product_image   WHERE product_id = ANY (v_products);
+    DELETE FROM tb_product_variant WHERE product_id = ANY (v_products);
+    -- read model do preço: sem FK, seguraria o SKU (uk_variant_price_tenant_sku)
+    DELETE FROM tb_variant_price   WHERE tenant_id = v_tenant AND (product_id = ANY (v_products) OR sku = ANY (v_skus));
+    DELETE FROM tb_product         WHERE id = ANY (v_products);
+
+    IF cardinality(v_products) > 0 THEN
+        RAISE NOTICE 'seed: % produto(s) de demonstração antigos removidos antes da V7', cardinality(v_products);
+    END IF;
+END $$;
