@@ -1,5 +1,6 @@
 package com.wlstore.pricing_service.messaging;
 
+import com.wlstore.common.messaging.ProcessedEventInbox;
 import com.wlstore.pricing_service.service.SkuSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

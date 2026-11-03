@@ -1,3 +1,4 @@
    com.wlstore.common.config.WlstoreCommonAutoConfiguration
    com.wlstore.common.config.WlstoreJpaAutoConfiguration
    com.wlstore.common.config.WlstoreTenantAutoConfiguration
+   com.wlstore.common.config.WlstoreMessagingAutoConfiguration

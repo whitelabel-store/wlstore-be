@@ -2,6 +2,7 @@ package com.wlstore.catalog_service.messaging;
 
 import com.wlstore.catalog_service.model.VariantPrice;
 import com.wlstore.catalog_service.repository.VariantPriceRepository;
+import com.wlstore.common.messaging.ProcessedEventInbox;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

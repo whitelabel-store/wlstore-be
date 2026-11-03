@@ -1,5 +1,6 @@
 package com.wlstore.inventory_service.messaging;
 
+import com.wlstore.common.messaging.ProcessedEventInbox;
 import com.wlstore.inventory_service.service.StockSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,7 +13,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CatalogEventHandler {
 
-    private final  ProcessedEventInbox inbox;
+    private final ProcessedEventInbox inbox;
     private final StockSyncService stockSyncService;
 
     @Transactional
