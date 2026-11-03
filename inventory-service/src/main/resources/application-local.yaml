@@ -9,6 +9,11 @@ spring:
     url: jdbc:postgresql://localhost:${INVENTORY_DB_PORT:5732}/${INVENTORY_POSTGRES_DB:inventorydb}
     username: ${INVENTORY_POSTGRES_USER:admin}
     password: ${INVENTORY_POSTGRES_PASSWORD:admin}
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
