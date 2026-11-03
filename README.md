@@ -161,22 +161,14 @@ Swagger: catálogo em `http://localhost:8081/swagger-ui.html`, pricing em
 
 ## Dados de demonstração (seed)
 
-Categoria e produto chegam do mesmo jeito: SQL do Flyway. A árvore de
-categorias é schema de verdade (todo ambiente tem); produto e preço de
-exemplo ficam numa pasta separada, `db/seed/`, que só entra nos perfis
-`local` e `develop` (`spring.flyway.locations`). Prod não recebe dado de
-exemplo.
+Categoria e produto chegam do mesmo jeito: migration do Flyway, igual ao resto
+do schema. Banco novo (local, develop, prod) já nasce com os dois.
 
-| O quê | Arquivo | Ambientes |
-| ----- | ------- | --------- |
-| árvore de categorias | `catalog-service/.../db/migration/V6__seed_categories.sql` | todos |
-| produtos de demonstração | `catalog-service/.../db/seed/V7__seed_products.sql` | local, develop |
-| preço dos produtos acima | `pricing-service/.../db/seed/V5__seed_prices.sql` | local, develop |
-
-Os seeds dividem a numeração com as migrations (o Flyway junta as duas
-pastas): a próxima migration de schema é **V8** no catálogo e **V6** no
-pricing — nunca reaproveite um número de `db/seed/`. Em prod essas versões
-ficam como um buraco na sequência, o que o Flyway aceita.
+| O quê | Migration |
+| ----- | --------- |
+| árvore de categorias | `catalog-service/.../V6__seed_categories.sql` |
+| produtos de demonstração | `catalog-service/.../V7__seed_products.sql` |
+| preço dos produtos acima | `pricing-service/.../V5__seed_prices.sql` |
 
 Produto cadastrado pela API publica um evento que o pricing-service consome
 para aprender o SKU (`tb_known_sku`) antes de aceitar preço — é assim que o
