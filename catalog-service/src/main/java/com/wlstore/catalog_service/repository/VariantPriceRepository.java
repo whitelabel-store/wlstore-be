@@ -12,4 +12,6 @@ public interface VariantPriceRepository extends JpaRepository<VariantPrice, UUID
     Optional<VariantPrice> findBySku(String sku);
     List<VariantPrice> findByProductId(UUID productId);
     List<VariantPrice> findByProductIdIn(Collection<UUID> productIds);
+    void deleteByProductId(UUID productId);
+    void deleteByProductIdAndSkuIn(UUID productId, Collection<String> skus);
 }
