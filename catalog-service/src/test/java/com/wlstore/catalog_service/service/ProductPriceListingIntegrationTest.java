@@ -195,6 +195,46 @@ class ProductPriceListingIntegrationTest extends AbstractIntegrationTest {
     // ---------- helpers ----------
 
     /** phone: from 129900 (variants 129900 and 159900) | case: 4990 | one product without any price. */
+    // ---------- read model cleanup ----------
+
+    @Test
+    void deletingAProductAlsoDropsItsCopiedPrices() {
+        UUID tenant = UUID.randomUUID();
+        UUID category = newCategory(tenant);
+
+        ProductResponseDTO phone = newProduct(tenant, category, "Redmi 18", "PH-128", "PH-256");
+        priceIt(tenant, phone.id(), "PH-128", 129900L);
+        priceIt(tenant, phone.id(), "PH-256", 159900L);
+
+        TenantContext.runWithTenant(tenant, () -> productService.delete(phone.id()));
+
+        // o SKU fica livre: um produto novo com ele pode receber preço de novo
+        assertThat(TenantContext.callWithTenant(tenant, () -> variantPriceRepository.findByProductId(phone.id())))
+                .isEmpty();
+    }
+
+    @Test
+    void removingAVariantDropsItsPriceFromTheFromPrice() {
+        UUID tenant = UUID.randomUUID();
+        UUID category = newCategory(tenant);
+
+        ProductResponseDTO phone = newProduct(tenant, category, "Redmi 18", "PH-128", "PH-256");
+        priceIt(tenant, phone.id(), "PH-128", 129900L);
+        priceIt(tenant, phone.id(), "PH-256", 159900L);
+
+        ProductRequestDTO onlyThe256 = new ProductRequestDTO(
+                "Redmi 18", "Brand", "Description", "ACTIVE", new CategoryRefDTO(category),
+                List.of(new ProductVariantRequestDTO("PH-256", "Variant PH-256", null, null, null, null)), null);
+        TenantContext.runWithTenant(tenant, () -> productService.update(phone.id(), onlyThe256));
+
+        assertThat(list(tenant, priceBetween(null, null), PageRequest.of(0, 10)).data())
+                .extracting(ProductResponseDTO::title, ProductResponseDTO::priceFromCents)
+                .containsExactly(tuple("Redmi 18", 159900L));
+        assertThat(TenantContext.callWithTenant(tenant, () -> variantPriceRepository.findByProductId(phone.id())))
+                .extracting(VariantPrice::getSku)
+                .containsExactly("PH-256");
+    }
+
     private UUID seedPhoneCaseAndUnpriced() {
         UUID tenant = UUID.randomUUID();
         UUID category = newCategory(tenant);
