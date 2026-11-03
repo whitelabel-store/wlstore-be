@@ -178,6 +178,12 @@ de produto/SKU nos dois serviços para ficar consistente: a V5 do pricing
 replica à mão o que o evento teria feito. Mudou produto/SKU numa, muda a
 outra junto.
 
+Banco que já tinha os produtos de demonstração cadastrados pela API (o antigo
+`seed-demo.sh`, mesmos títulos/SKUs com outros ids) é arrumado sozinho: o
+callback `db/migration/beforeMigrate.sql` de cada serviço apaga essas linhas
+antes da V7/V5, e só enquanto elas não foram aplicadas — depois disso não
+mexe em mais nada. Mudou título/SKU na V7/V5, atualize as listas dos callbacks.
+
 Migration só roda uma vez por banco (Flyway cobra checksum); pra reaplicar
 depois de editar, reseta o volume do Postgres daquele serviço
 (`docker compose down -v` ou `docker volume rm` do `catalogdb-data`/
