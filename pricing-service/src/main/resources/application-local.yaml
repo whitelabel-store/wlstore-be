@@ -19,3 +19,8 @@ spring:
     password: ${RABBITMQ_PASSWORD:admin}
   jpa:
     show-sql: true
+
+wlstore:
+  outbox:
+    enabled: true
+    exchange: pricing.events

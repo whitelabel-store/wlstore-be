@@ -42,6 +42,11 @@ spring:
           max-attempts: 3
           multiplier: 2
 
+wlstore:
+  outbox:
+    enabled: true
+    exchange: pricing.events
+
 springdoc:
   api-docs:
     path: /v3/api-docs

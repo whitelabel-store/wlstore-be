@@ -1,11 +1,16 @@
 package com.wlstore.pricing_service.outbox;
 
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.wlstore.common.outbox.OutboxEventPublisher;
+import com.wlstore.common.outbox.OutboxRelayer;
 
 import java.util.List;
 import java.util.UUID;

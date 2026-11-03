@@ -1,13 +1,10 @@
-package com.wlstore.pricing_service.outbox;
+package com.wlstore.common.outbox;
 
-import com.wlstore.pricing_service.config.RabbitConfig;
-import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
@@ -17,13 +14,18 @@ import java.util.concurrent.TimeoutException;
 /**
  * Publica UM evento da outbox no RabbitMQ e só retorna depois que o broker confirmou (ack).
  * Qualquer falha vira exceção: o evento continua pendente e será tentado de novo.
+ * O exchange de destino é do serviço (wlstore.outbox.exchange); o routing key é o tipo do evento.
  */
-@Component
-@RequiredArgsConstructor
 public class OutboxEventPublisher {
     private static final long CONFIRM_TIMEOUT_SECONDS = 5;
 
     private final RabbitTemplate rabbitTemplate;
+    private final String exchange;
+
+    public OutboxEventPublisher(RabbitTemplate rabbitTemplate, String exchange) {
+        this.rabbitTemplate = rabbitTemplate;
+        this.exchange = exchange;
+    }
 
     public void publish(OutboxEvent event) {
         String eventId = event.getId().toString();
@@ -37,7 +39,7 @@ public class OutboxEventPublisher {
                 .build();
 
         CorrelationData correlation = new CorrelationData(eventId);
-        rabbitTemplate.send(RabbitConfig.PRICING_EVENTS_EXCHANGE, event.getEventType(), message, correlation);
+        rabbitTemplate.send(exchange, event.getEventType(), message, correlation);
 
         awaitConfirm(correlation, eventId);
     }
@@ -45,6 +47,7 @@ public class OutboxEventPublisher {
     private void awaitConfirm(CorrelationData correlation, String eventId) {
         try {
             CorrelationData.Confirm confirm = correlation.getFuture().get(CONFIRM_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
             if (!confirm.ack()) {
                 throw new IllegalStateException("Broker nack for outbox event " + eventId + ": " + confirm.reason());
             }

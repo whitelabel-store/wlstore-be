@@ -11,6 +11,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
+
 @Transactional
 class OutboxEventRepositoryTest extends AbstractIntegrationTest {
 

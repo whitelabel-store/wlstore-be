@@ -1,4 +1,4 @@
-package com.wlstore.pricing_service.outbox;
+package com.wlstore.common.outbox;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +12,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
      * Pega e TRAVA os próximos eventos ainda não publicados, do mais antigo para o mais novo.
      * SKIP LOCKED: se outra instância já travou uma linha, pula para a próxima em vez de esperar.
      * Só funciona dentro de uma transação (o lock dura até o commit).
-     * Usa o índice parcial idx_outbox_unpublished criado na V4.
+     * Usa o índice parcial idx_outbox_unpublished criado na migration do serviço.
      */
     @Query(value = """
             select * from tb_outbox_event

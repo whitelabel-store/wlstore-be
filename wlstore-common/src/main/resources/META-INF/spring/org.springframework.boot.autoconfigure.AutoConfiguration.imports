@@ -2,3 +2,4 @@
    com.wlstore.common.config.WlstoreJpaAutoConfiguration
    com.wlstore.common.config.WlstoreTenantAutoConfiguration
    com.wlstore.common.config.WlstoreMessagingAutoConfiguration
+   com.wlstore.common.config.WlstoreOutboxAutoConfiguration

@@ -1,5 +1,7 @@
 package com.wlstore.pricing_service.outbox;
 
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import com.wlstore.pricing_service.model.Price;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,10 +1,8 @@
-package com.wlstore.pricing_service.outbox;
+package com.wlstore.common.outbox;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -15,10 +13,7 @@ import java.util.List;
  * o evento é publicado de novo (os consumidores deduplicam pelo messageId).
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "wlstore.outbox.relay", name = "enabled", havingValue = "true", matchIfMissing = true)
-
 public class OutboxRelayer {
     private static final int BATCH_SIZE = 50;
 
@@ -39,6 +34,7 @@ public class OutboxRelayer {
                         event.getId(), event.getEventType(), ex);
                 return;
             }
+
             event.markPublished();
         }
     }

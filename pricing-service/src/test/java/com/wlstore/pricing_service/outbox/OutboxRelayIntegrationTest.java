@@ -1,5 +1,7 @@
 package com.wlstore.pricing_service.outbox;
 
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import com.wlstore.pricing_service.AbstractIntegrationTest;
 import com.wlstore.pricing_service.service.PriceService;
 import com.wlstore.pricing_service.service.SkuSyncService;
@@ -13,6 +15,9 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.wlstore.common.outbox.OutboxEventPublisher;
+import com.wlstore.common.outbox.OutboxRelayer;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
