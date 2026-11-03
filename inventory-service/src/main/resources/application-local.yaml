@@ -10,10 +10,10 @@ spring:
     username: ${INVENTORY_POSTGRES_USER:admin}
     password: ${INVENTORY_POSTGRES_PASSWORD:admin}
   rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST}
-    port: ${SPRING_RABBITMQ_PORT:5672}
-    username: ${SPRING_RABBITMQ_USERNAME}
-    password: ${SPRING_RABBITMQ_PASSWORD}
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:admin}
   jpa:
     open-in-view: false
     hibernate:
