@@ -18,6 +18,11 @@ public class RabbitConfig {
     public static final String PRICING_EVENTS_DLQ = "catalog.pricing-events.dlq";
     public static final String PRICING_EVENTS_ROUTING_KEY = "price.*";
 
+    public static final String INVENTORY_EVENTS_EXCHANGE = "inventory.events";
+    public static final String INVENTORY_EVENTS_QUEUE = "catalog.inventory-events";
+    public static final String INVENTORY_EVENTS_DLQ = "catalog.inventory-events.dlq";
+    public static final String INVENTORY_EVENTS_ROUTING_KEY = "stock.*";
+
     /** Exchange do tipo topic, durável: sobrevive a reinício do broker. */
     @Bean
     public TopicExchange catalogEventsExchange() {
@@ -49,5 +54,32 @@ public class RabbitConfig {
         return BindingBuilder.bind(pricingEventsQueue)
                 .to(pricingEventsExchange)
                 .with(PRICING_EVENTS_ROUTING_KEY);
+    }
+
+    /** Mesma regra do pricing: o inventory também declara este exchange. */
+    @Bean
+    public TopicExchange inventoryEventsExchange() {
+        return new TopicExchange(INVENTORY_EVENTS_EXCHANGE, true, false);
+    }
+
+    /** Caixa de correio do catálogo para eventos de estoque; mensagem rejeitada vai para a DLQ. */
+    @Bean
+    public Queue inventoryEventsQueue() {
+        return QueueBuilder.durable(INVENTORY_EVENTS_QUEUE)
+                .withArgument("x-dead-letter-exchange", "")
+                .withArgument("x-dead-letter-routing-key", INVENTORY_EVENTS_DLQ)
+                .build();
+    }
+
+    @Bean
+    public Queue inventoryEventsDeadLetterQueue() {
+        return QueueBuilder.durable(INVENTORY_EVENTS_DLQ).build();
+    }
+
+    @Bean
+    public Binding inventoryEventsBinding(Queue inventoryEventsQueue, TopicExchange inventoryEventsExchange) {
+        return BindingBuilder.bind(inventoryEventsQueue)
+                .to(inventoryEventsExchange)
+                .with(INVENTORY_EVENTS_ROUTING_KEY);
     }
 }
