@@ -1,9 +1,11 @@
 package com.wlstore.catalog_service.outbox;
 
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventPublisher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.core.Message;
@@ -28,8 +30,12 @@ class OutboxEventPublisherTest {
     @Mock
     RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
     OutboxEventPublisher publisher;
+
+    @BeforeEach
+    void setUp() {
+        publisher = new OutboxEventPublisher(rabbitTemplate, "catalog.events");
+    }
 
     @Test
     void publishSendsPayloadToExchangeUsingEventTypeAsRoutingKey() {

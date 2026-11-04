@@ -1,6 +1,8 @@
 package com.wlstore.catalog_service.outbox;
 
 import com.wlstore.catalog_service.AbstractIntegrationTest;
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

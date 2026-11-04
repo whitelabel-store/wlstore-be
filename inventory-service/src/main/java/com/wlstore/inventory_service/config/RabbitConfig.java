@@ -14,10 +14,17 @@ public class RabbitConfig {
     public static final String CATALOG_EVENTS_QUEUE = "inventory.catalog-events";
     public static final String CATALOG_EVENTS_DLQ = "inventory.catalog-events.dlq";
     public static final String PRODUCT_ROUTING_PATTERN = "product.*";
+    public static final String INVENTORY_EVENTS_EXCHANGE = "inventory.events";
 
     @Bean
     TopicExchange catalogExchange() {
         return new TopicExchange(CATALOG_EXCHANGE, true, false);
+    }
+
+    /** Exchange where inventory publishes its own events (stock.changed). Topic and durable. */
+    @Bean
+    TopicExchange inventoryEventsExchange() {
+        return new TopicExchange(INVENTORY_EVENTS_EXCHANGE, true, false);
     }
 
     @Bean

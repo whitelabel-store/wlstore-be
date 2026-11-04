@@ -1,6 +1,8 @@
 package com.wlstore.catalog_service.outbox;
 
 import com.wlstore.catalog_service.model.Product;
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;

@@ -4,6 +4,8 @@ import com.wlstore.catalog_service.enums.ActiveStatus;
 import com.wlstore.catalog_service.enums.ProductStatus;
 import com.wlstore.catalog_service.model.Product;
 import com.wlstore.catalog_service.model.ProductVariant;
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

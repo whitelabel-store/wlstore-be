@@ -5,6 +5,7 @@ import com.wlstore.inventory_service.dto.StockResponseDTO;
 import com.wlstore.inventory_service.exception.InsufficientStockException;
 import com.wlstore.inventory_service.exception.StockBelowReservedException;
 import com.wlstore.inventory_service.model.Stock;
+import com.wlstore.inventory_service.outbox.StockEventRecorder;
 import com.wlstore.inventory_service.repository.StockRepository;
 import com.wlstore.inventory_service.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.time.Instant;
 public class StockServiceImpl implements StockService {
 
     private final StockRepository stockRepository;
+    private final StockEventRecorder stockEventRecorder;
 
     @Override
     @Transactional
@@ -27,6 +29,9 @@ public class StockServiceImpl implements StockService {
         }
 
         if (stockRepository.reserve(sku, quantity, Instant.now()) == 1) {
+            // The UPDATE keeps the row locked until this transaction commits, so this read sees exactly the
+            // balance our change produced, and the version in the event follows the order of the commits.
+            stockEventRecorder.record(findOrThrow(sku));
             return;
         }
 
@@ -51,7 +56,9 @@ public class StockServiceImpl implements StockService {
         }
 
         if (stockRepository.setOnHand(sku, quantityOnHand, Instant.now()) == 1) {
-            return StockResponseDTO.from(findOrThrow(sku));
+            Stock stock = findOrThrow(sku);
+            stockEventRecorder.record(stock);
+            return StockResponseDTO.from(stock);
         }
 
         // Same pattern as reserve: the UPDATE decided; the read only explains why nothing changed.
@@ -62,6 +69,6 @@ public class StockServiceImpl implements StockService {
 
     private Stock findOrThrow(String sku) {
         return stockRepository.findBySku(sku)
-                .orElseThrow(() -> new ResourceNotFoundException("Stock", "id", sku));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock", "sku", sku));
     }
 }

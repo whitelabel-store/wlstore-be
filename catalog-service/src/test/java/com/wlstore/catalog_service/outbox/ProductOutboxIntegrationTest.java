@@ -8,6 +8,8 @@ import com.wlstore.catalog_service.dto.ProductVariantRequestDTO;
 import com.wlstore.catalog_service.model.Category;
 import com.wlstore.catalog_service.repository.CategoryRepository;
 import com.wlstore.catalog_service.service.ProductService;
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

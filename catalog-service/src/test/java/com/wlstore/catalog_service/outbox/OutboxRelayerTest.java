@@ -1,5 +1,9 @@
 package com.wlstore.catalog_service.outbox;
 
+import com.wlstore.common.outbox.OutboxEvent;
+import com.wlstore.common.outbox.OutboxEventPublisher;
+import com.wlstore.common.outbox.OutboxEventRepository;
+import com.wlstore.common.outbox.OutboxRelayer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;

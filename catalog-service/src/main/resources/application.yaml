@@ -47,6 +47,10 @@ spring:
         default-page-size: 10
         max-page-size: 100
         one-indexed-parameters: false
+wlstore:
+  outbox:
+    enabled: true
+    exchange: catalog.events
 
 springdoc:
   api-docs:
