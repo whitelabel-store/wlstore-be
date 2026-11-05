@@ -153,11 +153,12 @@ jobs:
                 "paths": [
                   "inventory-service/",
                   "wlstore-common/",
-                  "pom.xml"
+                  "pom.xml",
+                  "Dockerfile",
+                  ".dockerignore"
                 ],
                 "setup": "java",
-                "test": "mvn -B -ntp -pl inventory-service -am test",
-                "deploy": false
+                "test": "mvn -B -ntp -pl inventory-service -am test"
               }
             ]
           EVENT: ${{ github.event_name }}

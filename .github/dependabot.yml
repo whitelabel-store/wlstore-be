@@ -34,6 +34,18 @@ updates:
 
 
   - package-ecosystem: maven
+    directory: "/inventory-service"
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      inventory-service-minor-patch:
+        update-types: [minor, patch]
+
+
+  - package-ecosystem: maven
     directory: "/wlstore-common"
     target-branch: develop
     schedule:
