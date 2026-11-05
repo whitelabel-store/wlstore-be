@@ -14,11 +14,13 @@ import com.wlstore.catalog_service.model.Product;
 import com.wlstore.catalog_service.model.ProductImage;
 import com.wlstore.catalog_service.model.ProductVariant;
 import com.wlstore.catalog_service.model.VariantPrice;
+import com.wlstore.catalog_service.model.VariantStock;
 import com.wlstore.catalog_service.outbox.ProductEventRecorder;
 import com.wlstore.catalog_service.repository.CategoryRepository;
 import com.wlstore.catalog_service.repository.ProductRepository;
 import com.wlstore.catalog_service.repository.ProductSpecifications;
 import com.wlstore.catalog_service.repository.VariantPriceRepository;
+import com.wlstore.catalog_service.repository.VariantStockRepository;
 import com.wlstore.catalog_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final VariantPriceRepository variantPriceRepository;
+    private final VariantStockRepository variantStockRepository;
     private final ProductMapper productMapper;
     private final ProductEventRecorder eventRecorder;
 
@@ -87,8 +90,12 @@ public class ProductServiceImpl implements ProductService {
         Map<UUID, VariantPrice> cheapestByProduct = cheapestPriceByProduct(
                 products.getContent().stream().map(Product::getId).toList());
 
-        return PageResponseDTO.from(products.map(product ->
-                withPriceFrom(productMapper.toResponseDTO(product), cheapestByProduct.get(product.getId()))));
+        Map<String, Integer> availableBySku = availableBySku(products.getContent());
+
+        return PageResponseDTO.from(products.map(product -> withPriceAndStock(
+                productMapper.toResponseDTO(product),
+                cheapestByProduct.get(product.getId()),
+                inStockOf(product, availableBySku))));
     }
 
     @Override
@@ -167,13 +174,54 @@ public class ProductServiceImpl implements ProductService {
                         BinaryOperator.minBy(CHEAPEST_FIRST)));
     }
 
-    // The prices come from another source (the read model), so the response is completed here, not in the mapper.
-    private ProductResponseDTO withPriceFrom(ProductResponseDTO dto, VariantPrice cheapest) {
+    /**
+     * One query for the whole page (IN): the available units of every variant, by SKU.
+     * A SKU without a stock row is absent from the map, which means "no information".
+     */
+    private Map<String, Integer> availableBySku(Collection<Product> products) {
+        Set<String> skus = products.stream()
+                .flatMap(product -> product.getVariants().stream())
+                .map(ProductVariant::getSku)
+                .collect(Collectors.toSet());
+
+        if (skus.isEmpty()) {
+            return Map.of();
+        }
+
+        return variantStockRepository.findBySkuIn(skus).stream()
+                .collect(Collectors.toMap(VariantStock::getSku, VariantStock::getAvailable));
+    }
+
+    /**
+     * true: some variant has units available. false: there is stock information and every variant is
+     * sold out. null: no variant has a stock row yet, so we do not know (it must not look sold out).
+     */
+    private Boolean inStockOf(Product product, Map<String, Integer> availableBySku) {
+        boolean known = false;
+
+        for (ProductVariant variant : product.getVariants()) {
+            Integer available = availableBySku.get(variant.getSku());
+            if (available == null) {
+                continue;
+            }
+            if (available > 0) {
+                return Boolean.TRUE;
+            }
+            known = true;
+        }
+
+        return known ? Boolean.FALSE : null;
+    }
+
+    // Prices and availability come from other sources (the read models), so the response is completed
+    // here, not in the mapper.
+    private ProductResponseDTO withPriceAndStock(ProductResponseDTO dto, VariantPrice cheapest, Boolean inStock) {
         Long amount = cheapest == null ? null : cheapest.getAmountCents();
         Long original = cheapest == null ? null : cheapest.getOriginalAmountCents();
 
         return new ProductResponseDTO(dto.id(), dto.title(), dto.brand(), dto.description(), dto.status(),
-                dto.category(), dto.variants(), dto.images(), amount, original, dto.createdAt(), dto.updatedAt());
+                dto.category(), dto.variants(), dto.images(), amount, original, inStock,
+                dto.createdAt(), dto.updatedAt());
     }
 
     /**

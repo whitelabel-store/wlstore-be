@@ -15,6 +15,7 @@ public record ProductResponseDTO(
         List<ProductImageResponseDTO> images,
         Long priceFromCents,
         Long originalPriceFromCents,
+        Boolean inStock,
         Instant createdAt,
         Instant updatedAt
 ) {
