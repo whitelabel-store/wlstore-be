@@ -24,6 +24,7 @@ import com.wlstore.catalog_service.repository.VariantStockRepository;
 import com.wlstore.catalog_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -87,15 +88,10 @@ public class ProductServiceImpl implements ProductService {
 
         Page<Product> products = productRepository.findAll(specification, effectivePageable);
 
-        Map<UUID, VariantPrice> cheapestByProduct = cheapestPriceByProduct(
-                products.getContent().stream().map(Product::getId).toList());
+        // same order as the page: the sort was decided by the query, the DTOs only follow it
+        List<ProductResponseDTO> content = toResponses(products.getContent());
 
-        Map<String, Integer> availableBySku = availableBySku(products.getContent());
-
-        return PageResponseDTO.from(products.map(product -> withPriceAndStock(
-                productMapper.toResponseDTO(product),
-                cheapestByProduct.get(product.getId()),
-                inStockOf(product, availableBySku))));
+        return PageResponseDTO.from(new PageImpl<>(content, products.getPageable(), products.getTotalElements()));
     }
 
     @Override
@@ -105,7 +101,7 @@ public class ProductServiceImpl implements ProductService {
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
-        return productMapper.toResponseDTO(product);
+        return toResponses(List.of(product)).getFirst();
     }
 
     @Override
@@ -158,7 +154,26 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
-     * One query for the whole page (IN), then the cheapest price row per product. The "from" price and
+     * Completes the responses of a list of products with data that lives in other read models: the "from"
+     * price and the availability. Two queries for the whole list (IN), whatever its size, so it serves the
+     * listing (a page) and the detail (a list of one) alike. The result keeps the order of the input.
+     */
+    private List<ProductResponseDTO> toResponses(List<Product> products) {
+        Map<UUID, VariantPrice> cheapestByProduct = cheapestPriceByProduct(
+                products.stream().map(Product::getId).toList());
+
+        Map<String, Integer> availableBySku = availableBySku(products);
+
+        return products.stream()
+                .map(product -> withPriceAndStock(
+                        productMapper.toResponseDTO(product),
+                        cheapestByProduct.get(product.getId()),
+                        inStockOf(product, availableBySku)))
+                .toList();
+    }
+
+    /**
+     * One query for the whole list (IN), then the cheapest price row per product. The "from" price and
      * its original ("de") come from that same row, so the discount is never mixed across variants.
      * Products without any price are absent from the map.
      */
@@ -175,7 +190,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
-     * One query for the whole page (IN): the available units of every variant, by SKU.
+     * One query for the whole list (IN): the available units of every variant, by SKU.
      * A SKU without a stock row is absent from the map, which means "no information".
      */
     private Map<String, Integer> availableBySku(Collection<Product> products) {
