@@ -90,7 +90,7 @@ class ProductStockListingIntegrationTest extends AbstractIntegrationTest {
     private PageResponseDTO<ProductResponseDTO> list(UUID tenant) {
         return TenantContext.callWithTenant(tenant,
                 () -> productService.findAll(
-                        new ProductFilterDTO(null, null, null, null, null, null, null, null),
+                        new ProductFilterDTO(null, null, null, null, null, null, null, null, null),
                         PageRequest.of(0, 10)));
     }
 

@@ -36,7 +36,12 @@ public record ProductFilterDTO(
         @Schema(description = "Keeps products whose \"from\" price (lowest variant price) is at most this, in cents. "
                 + "Products without any price never match a price filter.",
                 example = "150000")
-        Long maxPriceCents
+        Long maxPriceCents,
+
+        @Schema(description = "When true, keeps only products with at least one variant that has units available. "
+                + "Products without stock information never match. Omitted or false: no stock filtering.",
+                example = "true")
+        Boolean inStock
 ) {
     public boolean shouldIncludeSubchildren() {
         return includeChildren == null || includeChildren;

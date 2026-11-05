@@ -251,7 +251,7 @@ class ProductPriceListingIntegrationTest extends AbstractIntegrationTest {
     }
 
     private ProductFilterDTO priceBetween(Long minPriceCents, Long maxPriceCents) {
-        return new ProductFilterDTO(null, null, null, null, null, null, minPriceCents, maxPriceCents);
+        return new ProductFilterDTO(null, null, null, null, null, null, minPriceCents, maxPriceCents, null);
     }
 
     private PageResponseDTO<ProductResponseDTO> list(UUID tenant, ProductFilterDTO filter, Pageable pageable) {

@@ -90,7 +90,7 @@ class ProductPriceSortIntegrationTest extends AbstractIntegrationTest {
         UUID tenant = seed();
 
         PageResponseDTO<ProductResponseDTO> page = list(tenant,
-                new ProductFilterDTO(null, null, null, null, null, null, 10_000L, null),
+                new ProductFilterDTO(null, null, null, null, null, null, 10_000L, null, null),
                 PageRequest.of(0, 10, Sort.by("priceFromCents").descending()));
 
         assertThat(page.data()).extracting(ProductResponseDTO::title).containsExactly("Redmi 18", "Fone");
@@ -129,7 +129,7 @@ class ProductPriceSortIntegrationTest extends AbstractIntegrationTest {
     }
 
     private ProductFilterDTO noFilter() {
-        return new ProductFilterDTO(null, null, null, null, null, null, null, null);
+        return new ProductFilterDTO(null, null, null, null, null, null, null, null, null);
     }
 
     private PageResponseDTO<ProductResponseDTO> list(UUID tenant, ProductFilterDTO filter,

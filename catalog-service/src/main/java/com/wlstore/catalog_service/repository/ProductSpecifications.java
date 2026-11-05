@@ -2,7 +2,9 @@ package com.wlstore.catalog_service.repository;
 
 import com.wlstore.catalog_service.dto.ProductFilterDTO;
 import com.wlstore.catalog_service.model.Product;
+import com.wlstore.catalog_service.model.ProductVariant;
 import com.wlstore.catalog_service.model.VariantPrice;
+import com.wlstore.catalog_service.model.VariantStock;
 import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
@@ -73,6 +75,11 @@ public final class ProductSpecifications {
             }
         }
 
+        // only TRUE filters: null and false both mean "do not filter by stock"
+        if (Boolean.TRUE.equals(filter.inStock())) {
+            predicates.add(builder.exists(hasUnitsAvailable(root, query, builder)));
+        }
+
         return predicates.toArray(Predicate[]::new);
     }
 
@@ -83,6 +90,27 @@ public final class ProductSpecifications {
         lowestPrice.select(builder.min(price.<Long>get("amountCents")))
                 .where(builder.equal(price.get("productId"), root.get("id")));
         return lowestPrice;
+    }
+
+    /**
+     * EXISTS (a stock row with available > 0 for one of the product's variant SKUs). EXISTS, not a JOIN:
+     * a join would repeat a product once per in-stock variant and break the page size and the total.
+     * A product without any stock row has no such row, so it never matches.
+     */
+    private static Subquery<Integer> hasUnitsAvailable(Root<Product> root, AbstractQuery<?> query,
+                                                       CriteriaBuilder builder) {
+        Subquery<Integer> available = query.subquery(Integer.class);
+        Root<VariantStock> stock = available.from(VariantStock.class);
+
+        Subquery<String> productSkus = available.subquery(String.class);
+        Root<ProductVariant> variant = productSkus.from(ProductVariant.class);
+        productSkus.select(variant.<String>get("sku"))
+                .where(builder.equal(variant.get("product").get("id"), root.get("id")));
+
+        available.select(builder.literal(1))
+                .where(builder.greaterThan(stock.<Integer>get("available"), 0),
+                        stock.<String>get("sku").in(productSkus));
+        return available;
     }
 
     private static List<Order> orders(Sort sort, Root<Product> root, AbstractQuery<?> query, CriteriaBuilder builder) {
