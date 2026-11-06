@@ -1,6 +1,7 @@
 package com.wlstore.inventory_service.service.impl;
 
 import com.wlstore.common.exception.ResourceNotFoundException;
+import com.wlstore.inventory_service.dto.ReservationLineDTO;
 import com.wlstore.inventory_service.dto.StockResponseDTO;
 import com.wlstore.inventory_service.exception.InsufficientStockException;
 import com.wlstore.inventory_service.exception.StockBelowReservedException;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +43,14 @@ public class StockServiceImpl implements StockService {
         Stock stock = findOrThrow(sku);
 
         throw new InsufficientStockException(sku, quantity, stock.available());
+    }
+
+    @Override
+    @Transactional
+    public void reserveAll(UUID orderId, List<ReservationLineDTO> lines) {
+        for (ReservationLineDTO line : lines) {
+            reserve(line.sku(), line.quantity());
+        }
     }
 
     @Override
