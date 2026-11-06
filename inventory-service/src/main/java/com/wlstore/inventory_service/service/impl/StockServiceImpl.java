@@ -12,8 +12,10 @@ import com.wlstore.inventory_service.repository.ReservationRepository;
 import com.wlstore.inventory_service.repository.StockRepository;
 import com.wlstore.inventory_service.service.StockService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +28,7 @@ public class StockServiceImpl implements StockService {
     private final StockRepository stockRepository;
     private final StockEventRecorder stockEventRecorder;
     private final ReservationRepository reservationRepository;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     @Transactional
@@ -49,8 +52,18 @@ public class StockServiceImpl implements StockService {
     }
 
     @Override
-    @Transactional
     public void reserveAll(UUID orderId, List<ReservationLineDTO> lines) {
+        try {
+            transactionTemplate.executeWithoutResult(status -> reserveAllInTransaction(orderId, lines));
+        } catch (DataIntegrityViolationException lostTheRace) {
+            // Another call for the same order committed first (unique index). That transaction is over, so a
+            // second attempt, in a NEW transaction, finds the registry and returns. If the violation was something
+            // else, the second attempt fails with it again and the caller sees the real error.
+            transactionTemplate.executeWithoutResult(status -> reserveAllInTransaction(orderId, lines));
+        }
+    }
+
+    private void reserveAllInTransaction(UUID orderId, List<ReservationLineDTO> lines) {
         // retry of an order that already reserved: nothing to do (the first call's answer was just lost)
         if (reservationRepository.existsByOrderId(orderId)) {
             return;
