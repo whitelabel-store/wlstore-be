@@ -168,6 +168,9 @@ public class StockServiceImpl implements StockService {
                 throw new IllegalStateException("Reservation %s holds %d of %s but the stock has fewer reserved"
                         .formatted(orderId, line.getQuantity(), line.getSku()));
             }
+
+            // the snapshot is read AFTER the update, in the same transaction: it is the balance this confirmation left
+            stockEventRecorder.record(findOrThrow(line.getSku()));
         }
     }
 
