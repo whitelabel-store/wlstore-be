@@ -7,18 +7,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/reservations")
 @RequiredArgsConstructor
 @Tag(name = "Reservations", description = "Stock held by orders. All the lines of an order are reserved together.")
-
 public class ReservationController {
+
     private final StockService stockService;
 
     @Operation(
@@ -27,12 +30,24 @@ public class ReservationController {
                     + "Idempotent by orderId: sending the same order again answers 204 without reserving twice."
     )
     @ApiResponse(responseCode = "204", description = "Every line reserved (or the order was already reserved)")
-    @ApiResponse(responseCode = "400", description = "No lines, or a quantity that is not positive")
+    @ApiResponse(responseCode = "400", description = "No orderId, no lines, or a quantity that is not positive")
     @ApiResponse(responseCode = "404", description = "Some SKU is unknown for this tenant")
     @ApiResponse(responseCode = "409", description = "Some line has not enough available stock")
     @PostMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reserve(@RequestBody OrderReservationRequestDTO request) {
         stockService.reserveAll(request.orderId(), request.lines());
+    }
+
+    @Operation(
+            summary = "Release the stock held by an order",
+            description = "Gives back every unit the order was holding. Safe to repeat: releasing an order twice, "
+                    + "or an order that never reserved anything, changes nothing and answers 204."
+    )
+    @ApiResponse(responseCode = "204", description = "Units given back (or there was nothing to give back)")
+    @PostMapping("/{orderId}/release")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void release(@PathVariable UUID orderId) {
+        stockService.release(orderId);
     }
 }
