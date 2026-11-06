@@ -13,7 +13,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class StockReservationTenantIsolationTest extends AbstractIntegrationTest {
+class StockReservationLineTenantIsolationTest extends AbstractIntegrationTest {
 
     private static final String SKU = "SAME-SKU";
 

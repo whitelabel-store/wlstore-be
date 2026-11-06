@@ -14,6 +14,11 @@ public interface StockRepository extends JpaRepository<Stock, UUID> {
 
     Optional<Stock> findBySku(String sku);
 
+    /**
+     * Check and write in ONE statement: the row is locked while it runs, and a waiting transaction re-evaluates the
+     * WHERE against the committed value. Returns 1 when reserved, 0 when there was not enough available (or no such SKU).
+     * The version is bumped by hand so other optimistic writers still notice this change.
+     */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update Stock s
@@ -36,4 +41,16 @@ public interface StockRepository extends JpaRepository<Stock, UUID> {
                and s.quantityReserved <= :quantityOnHand
             """)
     int setOnHand(@Param("sku") String sku, @Param("quantityOnHand") int quantityOnHand, @Param("now") Instant now);
+
+    /** Gives back reserved units. Returns 0 if fewer than {@code quantity} are reserved (it must never go negative). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            update Stock s
+               set s.quantityReserved = s.quantityReserved - :quantity,
+                   s.version = s.version + 1,
+                   s.updatedAt = :now
+             where s.sku = :sku
+               and s.quantityReserved >= :quantity
+            """)
+    int release(@Param("sku") String sku, @Param("quantity") int quantity, @Param("now") Instant now);
 }

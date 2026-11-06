@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class StockReservationConcurrencyTest extends AbstractIntegrationTest {
+class StockReservationLineConcurrencyTest extends AbstractIntegrationTest {
 
     private static final String SKU = "HOT-SKU";
     private static final int THREADS = 20;

@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
-class OrderReservationControllerTest extends AbstractIntegrationTest {
+class OrderReservationLineControllerTest extends AbstractIntegrationTest {
 
     private static final String TENANT_HEADER = "X-Tenant-Id";
 

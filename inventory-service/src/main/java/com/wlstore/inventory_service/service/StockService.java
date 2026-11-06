@@ -26,6 +26,12 @@ public interface StockService {
     void reserveAll(UUID orderId, List<ReservationLineDTO> lines);
 
     /**
+     * Gives back the units an order was holding. Idempotent: releasing the same order again, or an order
+     * that never reserved anything, changes nothing.
+     */
+    void release(UUID orderId);
+
+    /**
      * @throws com.wlstore.common.exception.ResourceNotFoundException when the SKU has no stock row (404)
      */
     StockResponseDTO get(String sku);

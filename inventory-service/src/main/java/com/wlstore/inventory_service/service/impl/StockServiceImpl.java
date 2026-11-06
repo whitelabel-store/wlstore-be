@@ -3,11 +3,14 @@ package com.wlstore.inventory_service.service.impl;
 import com.wlstore.common.exception.ResourceNotFoundException;
 import com.wlstore.inventory_service.dto.ReservationLineDTO;
 import com.wlstore.inventory_service.dto.StockResponseDTO;
+import com.wlstore.inventory_service.enums.ReservationStatus;
 import com.wlstore.inventory_service.exception.InsufficientStockException;
 import com.wlstore.inventory_service.exception.StockBelowReservedException;
 import com.wlstore.inventory_service.model.Reservation;
+import com.wlstore.inventory_service.model.ReservationLine;
 import com.wlstore.inventory_service.model.Stock;
 import com.wlstore.inventory_service.outbox.StockEventRecorder;
+import com.wlstore.inventory_service.repository.ReservationLineRepository;
 import com.wlstore.inventory_service.repository.ReservationRepository;
 import com.wlstore.inventory_service.repository.StockRepository;
 import com.wlstore.inventory_service.service.StockService;
@@ -19,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -29,6 +33,7 @@ public class StockServiceImpl implements StockService {
     private final StockEventRecorder stockEventRecorder;
     private final ReservationRepository reservationRepository;
     private final TransactionTemplate transactionTemplate;
+    private final ReservationLineRepository reservationLineRepository;
 
     @Override
     @Transactional
@@ -79,10 +84,15 @@ public class StockServiceImpl implements StockService {
 
         // registered and flushed BEFORE the lines: a concurrent duplicate waits on the unique index
         // (tenant, order) and fails right away, instead of reserving a second time
-        reservationRepository.saveAndFlush(Reservation.builder().orderId(orderId).build());
+        Reservation reservation = reservationRepository.saveAndFlush(Reservation.builder().orderId(orderId).build());
 
         for (ReservationLineDTO line : lines) {
             reserve(line.sku(), line.quantity());
+            reservationLineRepository.save(ReservationLine.builder()
+                    .reservationId(reservation.getId())
+                    .sku(line.sku())
+                    .quantity(line.quantity())
+                    .build());
         }
     }
 
@@ -109,6 +119,30 @@ public class StockServiceImpl implements StockService {
         Stock stock = findOrThrow(sku);
 
         throw new StockBelowReservedException(sku, quantityOnHand, stock.getQuantityReserved());
+    }
+
+    @Override
+    @Transactional
+    public void release(UUID orderId) {
+        Optional<Reservation> reservation = reservationRepository.findByOrderId(orderId);
+        if (reservation.isEmpty()) {
+            return;     // never reserved anything: the desired end state already holds
+        }
+
+        // Claim the transition RESERVED -> RELEASED in one statement. Only the call that wins it gives units back;
+        // a repeat (or a concurrent release) finds it already moved and does nothing.
+        if (reservationRepository.transition(orderId, ReservationStatus.RESERVED, ReservationStatus.RELEASED,
+                Instant.now()) == 0) {
+            return;
+        }
+
+        for (ReservationLine line : reservationLineRepository.findByReservationId(reservation.get().getId())) {
+            if (stockRepository.release(line.getSku(), line.getQuantity(), Instant.now()) != 1) {
+                // would mean the books do not add up; abort the whole release (rolls back the transition too)
+                throw new IllegalStateException("Reservation %s holds %d of %s but the stock has fewer reserved"
+                        .formatted(orderId, line.getQuantity(), line.getSku()));
+            }
+        }
     }
 
     private Stock findOrThrow(String sku) {

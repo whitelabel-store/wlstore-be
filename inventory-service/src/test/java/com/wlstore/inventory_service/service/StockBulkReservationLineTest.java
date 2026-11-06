@@ -16,7 +16,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class StockBulkReservationTest extends AbstractIntegrationTest {
+class StockBulkReservationLineTest extends AbstractIntegrationTest {
 
     @Autowired
     StockService stockService;
