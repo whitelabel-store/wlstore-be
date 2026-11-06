@@ -70,6 +70,41 @@ class StockBulkReservationTest extends AbstractIntegrationTest {
         assertThat(reservedOf(tenant, "A-1")).isZero();
     }
 
+    // ---------- idempotency by orderId ----------
+
+    @Test
+    void theSameOrderReservedTwiceCountsOnce() {
+        UUID tenant = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        givenStock(tenant, "A-1", 10);
+
+        // the second call simulates the retry after a lost response
+        TenantContext.runWithTenant(tenant, () -> stockService.reserveAll(orderId, List.of(line("A-1", 3))));
+        TenantContext.runWithTenant(tenant, () -> stockService.reserveAll(orderId, List.of(line("A-1", 3))));
+
+        assertThat(reservedOf(tenant, "A-1")).isEqualTo(3);
+    }
+
+    @Test
+    void aFailedAttemptDoesNotConsumeTheOrderId() {
+        UUID tenant = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        givenStock(tenant, "A-1", 10);
+
+        // first attempt: C-1 does not exist yet, so everything is rolled back
+        assertThatThrownBy(() -> TenantContext.runWithTenant(tenant, () ->
+                stockService.reserveAll(orderId, List.of(line("A-1", 3), line("C-1", 1)))))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        // C-1 shows up; the same order retries and must go through, reserving A-1 exactly once
+        givenStock(tenant, "C-1", 5);
+        TenantContext.runWithTenant(tenant, () ->
+                stockService.reserveAll(orderId, List.of(line("A-1", 3), line("C-1", 1))));
+
+        assertThat(reservedOf(tenant, "A-1")).isEqualTo(3);
+        assertThat(reservedOf(tenant, "C-1")).isEqualTo(1);
+    }
+
     // ---------- helpers ----------
 
     private ReservationLineDTO line(String sku, int quantity) {

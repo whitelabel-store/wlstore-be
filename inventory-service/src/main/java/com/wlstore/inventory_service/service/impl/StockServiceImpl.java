@@ -5,8 +5,10 @@ import com.wlstore.inventory_service.dto.ReservationLineDTO;
 import com.wlstore.inventory_service.dto.StockResponseDTO;
 import com.wlstore.inventory_service.exception.InsufficientStockException;
 import com.wlstore.inventory_service.exception.StockBelowReservedException;
+import com.wlstore.inventory_service.model.Reservation;
 import com.wlstore.inventory_service.model.Stock;
 import com.wlstore.inventory_service.outbox.StockEventRecorder;
+import com.wlstore.inventory_service.repository.ReservationRepository;
 import com.wlstore.inventory_service.repository.StockRepository;
 import com.wlstore.inventory_service.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class StockServiceImpl implements StockService {
 
     private final StockRepository stockRepository;
     private final StockEventRecorder stockEventRecorder;
+    private final ReservationRepository reservationRepository;
 
     @Override
     @Transactional
@@ -48,6 +51,15 @@ public class StockServiceImpl implements StockService {
     @Override
     @Transactional
     public void reserveAll(UUID orderId, List<ReservationLineDTO> lines) {
+        // retry of an order that already reserved: nothing to do (the first call's answer was just lost)
+        if (reservationRepository.existsByOrderId(orderId)) {
+            return;
+        }
+
+        // registered and flushed BEFORE the lines: a concurrent duplicate waits on the unique index
+        // (tenant, order) and fails right away, instead of reserving a second time
+        reservationRepository.saveAndFlush(Reservation.builder().orderId(orderId).build());
+
         for (ReservationLineDTO line : lines) {
             reserve(line.sku(), line.quantity());
         }
