@@ -148,6 +148,29 @@ public class StockServiceImpl implements StockService {
         }
     }
 
+    @Override
+    @Transactional
+    public void confirm(UUID orderId) {
+        Reservation reservation = reservationRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation", "orderId", orderId));
+
+        // Claim the transition RESERVED -> CONFIRMED in one statement. Only the call that wins it consumes the units;
+        // a repeat finds it already moved and does nothing.
+        // (An order that was RELEASED also lands here with 0 rows: turning that into a 409 is the next step.)
+        if (reservationRepository.transition(orderId, ReservationStatus.RESERVED, ReservationStatus.CONFIRMED,
+                Instant.now()) == 0) {
+            return;
+        }
+
+        for (ReservationLine line : reservationLineRepository.findByReservationId(reservation.getId())) {
+            if (stockRepository.consume(line.getSku(), line.getQuantity(), Instant.now()) != 1) {
+                // would mean the books do not add up; abort the whole confirmation (rolls back the transition too)
+                throw new IllegalStateException("Reservation %s holds %d of %s but the stock has fewer reserved"
+                        .formatted(orderId, line.getQuantity(), line.getSku()));
+            }
+        }
+    }
+
     private Stock findOrThrow(String sku) {
         return stockRepository.findBySku(sku)
                 .orElseThrow(() -> new ResourceNotFoundException("Stock", "sku", sku));

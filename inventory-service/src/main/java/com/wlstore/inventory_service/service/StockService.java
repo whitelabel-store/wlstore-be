@@ -32,6 +32,14 @@ public interface StockService {
     void release(UUID orderId);
 
     /**
+     * Turns the units an order was holding into units that left the warehouse: on hand and reserved drop together.
+     * Idempotent for an order already confirmed.
+     *
+     * @throws com.wlstore.common.exception.ResourceNotFoundException when the order never reserved anything (404)
+     */
+    void confirm(UUID orderId);
+
+    /**
      * @throws com.wlstore.common.exception.ResourceNotFoundException when the SKU has no stock row (404)
      */
     StockResponseDTO get(String sku);
