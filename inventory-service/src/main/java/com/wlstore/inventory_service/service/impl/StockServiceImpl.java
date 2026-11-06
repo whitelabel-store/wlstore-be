@@ -53,6 +53,10 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public void reserveAll(UUID orderId, List<ReservationLineDTO> lines) {
+        if (lines == null || lines.isEmpty()) {
+            throw new IllegalArgumentException("An order needs at least one line");
+        }
+
         try {
             transactionTemplate.executeWithoutResult(status -> reserveAllInTransaction(orderId, lines));
         } catch (DataIntegrityViolationException lostTheRace) {
