@@ -121,6 +121,21 @@ class OrderReservationControllerTest extends AbstractIntegrationTest {
         assertThat(reservedOf(owner, "ORD-MINE")).isZero();
     }
 
+    @Test
+    void anOrderWithoutAnOrderIdAnswersBadRequest() throws Exception {
+        UUID tenant = UUID.randomUUID();
+        givenStock(tenant, "ORD-NOID", 10);
+
+        mockMvc.perform(post("/api/v1/reservations")
+                        .header(TENANT_HEADER, tenant.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lines\":[{\"sku\":\"ORD-NOID\",\"quantity\":1}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Bad Request"));
+
+        assertThat(reservedOf(tenant, "ORD-NOID")).isZero();
+    }
+
     // ---------- helpers ----------
 
     private MockHttpServletRequestBuilder reserve(UUID tenant, UUID orderId, String... lines) {

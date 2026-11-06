@@ -57,6 +57,10 @@ public class StockServiceImpl implements StockService {
             throw new IllegalArgumentException("An order needs at least one line");
         }
 
+        if (orderId == null) {
+            throw new IllegalArgumentException("An order needs an orderId");
+        }
+
         try {
             transactionTemplate.executeWithoutResult(status -> reserveAllInTransaction(orderId, lines));
         } catch (DataIntegrityViolationException lostTheRace) {
