@@ -13,6 +13,7 @@ import static org.mockito.Mockito.doThrow;
 
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,5 +71,20 @@ class OrderControllerTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void answersBadRequestWhenTheOrderHasNoLines() throws Exception {
+        String body = """
+                {"lines": []}
+                """;
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .header(TENANT_HEADER, UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(inventoryGateway);
     }
 }

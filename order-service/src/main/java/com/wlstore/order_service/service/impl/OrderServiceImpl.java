@@ -52,6 +52,7 @@ public class OrderServiceImpl implements OrderService {
         if (lines == null || lines.isEmpty()) {
             throw new IllegalArgumentException("An order needs at least one line");
         }
+
         for (OrderLineDTO line : lines) {
             if (line.quantity() <= 0) {
                 throw new IllegalArgumentException("Quantity must be positive for SKU " + line.sku());
