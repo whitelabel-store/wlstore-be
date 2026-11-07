@@ -50,4 +50,19 @@ public class ReservationController {
     public void release(@PathVariable UUID orderId) {
         stockService.release(orderId);
     }
+
+    @Operation(
+            summary = "Confirm an order: the held units leave the warehouse",
+            description = "On hand and reserved drop together. Safe to repeat: confirming an order twice answers 204 "
+                    + "and consumes once. Unlike release, an order that never reserved anything is an error, "
+                    + "because a confirmation is a promise that the units were held."
+    )
+    @ApiResponse(responseCode = "204", description = "Units consumed (or the order was already confirmed)")
+    @ApiResponse(responseCode = "404", description = "The order never reserved anything for this tenant")
+    @ApiResponse(responseCode = "409", description = "The order was already released: its units went back to the stock")
+    @PostMapping("/{orderId}/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void confirm(@PathVariable UUID orderId) {
+        stockService.confirm(orderId);
+    }
 }

@@ -51,4 +51,19 @@ public class InventoryExceptionHandler {
 
         return problemDetail;
     }
+
+    @ExceptionHandler(ReservationStateException.class)
+    public ProblemDetail handleReservationState(ReservationStateException ex) {
+
+        log.warn("Reservation state conflict: {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Reservation State Conflict");
+        problemDetail.setType(URI.create("https://example.com/reservation-state"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        problemDetail.setProperty("orderId", ex.getOrderId());
+        problemDetail.setProperty("status", ex.getStatus());
+
+        return problemDetail;
+    }
 }
