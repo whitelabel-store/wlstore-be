@@ -1,6 +1,7 @@
 package com.wlstore.order_service.controller;
 
 import com.wlstore.order_service.AbstractIntegrationTest;
+import com.wlstore.order_service.exception.InventoryUnavailableException;
 import com.wlstore.order_service.exception.ReservationRejectedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,5 +54,21 @@ class OrderControllerTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void answersServiceUnavailableWhenTheInventoryCannotBeReached() throws Exception {
+        doThrow(new InventoryUnavailableException("Inventory timed out"))
+                .when(inventoryGateway).reserve(any(), any());
+
+        String body = """
+                {"lines": [{"sku": "SKU-1", "quantity": 2}]}
+                """;
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .header(TENANT_HEADER, UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isServiceUnavailable());
     }
 }

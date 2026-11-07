@@ -14,4 +14,11 @@ public class OrderExceptionHandler {
     public ProblemDetail handleRejected(ReservationRejectedException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
+
+    @ExceptionHandler(InventoryUnavailableException.class)
+    public ProblemDetail handleUnavailable(InventoryUnavailableException ex) {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Inventory is temporarily unavailable. Try again later.");
+    }
 }
