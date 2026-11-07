@@ -26,7 +26,7 @@ public class OrderServiceImpl implements OrderService {
     private final TransactionTemplate transactionTemplate;
 
     /**
-     * Três passos, de propósito em transações separadas:
+     * 0. valida a entrada: inválida não cria nada nem chama ninguém;
      * 1. grava o pedido PENDING com as linhas e faz commit;
      * 2. fora de qualquer transação, pede a reserva ao inventory;
      * 3. grava o resultado: RESERVED, ou REJECTED se o inventory recusou.
@@ -34,6 +34,8 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public Order create(List<OrderLineDTO> lines) {
+        validate(lines);
+
         Order pending = savePending(lines);
 
         try {
@@ -44,6 +46,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return markAs(pending.getId(), OrderStatus.RESERVED);
+    }
+
+    private void validate(List<OrderLineDTO> lines) {
+        if (lines == null || lines.isEmpty()) {
+            throw new IllegalArgumentException("An order needs at least one line");
+        }
+        for (OrderLineDTO line : lines) {
+            if (line.quantity() <= 0) {
+                throw new IllegalArgumentException("Quantity must be positive for SKU " + line.sku());
+            }
+        }
     }
 
     private Order savePending(List<OrderLineDTO> lines) {
