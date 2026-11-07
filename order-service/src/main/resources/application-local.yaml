@@ -10,7 +10,10 @@ spring:
     username: ${ORDER_POSTGRES_USER:admin}
     password: ${ORDER_POSTGRES_PASSWORD:admin}
   jpa:
-    show-sql: true
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
 
 # Eureka só existe localmente (discovery-server); no Kubernetes quem descobre
 # serviços é o DNS do cluster.
