@@ -5,6 +5,7 @@ import com.wlstore.inventory_service.dto.ReservationLineDTO;
 import com.wlstore.inventory_service.dto.StockResponseDTO;
 import com.wlstore.inventory_service.enums.ReservationStatus;
 import com.wlstore.inventory_service.exception.InsufficientStockException;
+import com.wlstore.inventory_service.exception.ReservationStateException;
 import com.wlstore.inventory_service.exception.StockBelowReservedException;
 import com.wlstore.inventory_service.model.Reservation;
 import com.wlstore.inventory_service.model.ReservationLine;
@@ -154,12 +155,18 @@ public class StockServiceImpl implements StockService {
         Reservation reservation = reservationRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation", "orderId", orderId));
 
-        // Claim the transition RESERVED -> CONFIRMED in one statement. Only the call that wins it consumes the units;
-        // a repeat finds it already moved and does nothing.
-        // (An order that was RELEASED also lands here with 0 rows: turning that into a 409 is the next step.)
+        // Claim the transition RESERVED -> CONFIRMED in one statement. Only the call that wins it consumes the units.
         if (reservationRepository.transition(orderId, ReservationStatus.RESERVED, ReservationStatus.CONFIRMED,
                 Instant.now()) == 0) {
-            return;
+            // Lost the claim. Why? Ask the database again: another transaction may have changed the state since
+            // our first read, so the entity read at the top of the method may be stale.
+            ReservationStatus current = reservationRepository.statusOf(orderId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Reservation", "orderId", orderId));
+
+            if (current == ReservationStatus.CONFIRMED) {
+                return;     // a repeat of a confirmation that already happened
+            }
+            throw new ReservationStateException(orderId, current);
         }
 
         for (ReservationLine line : reservationLineRepository.findByReservationId(reservation.getId())) {

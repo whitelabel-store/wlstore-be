@@ -35,4 +35,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
                    @Param("from") ReservationStatus from,
                    @Param("to") ReservationStatus to,
                    @Param("now") Instant now);
+
+    /**
+     * The current state straight from the database. A scalar query, so it never returns an entity that was
+     * loaded earlier in the transaction and may be stale.
+     */
+    @Query("select r.status from Reservation r where r.orderId = :orderId")
+   Optional<ReservationStatus> statusOf(@Param("orderId") UUID orderId);
 }
