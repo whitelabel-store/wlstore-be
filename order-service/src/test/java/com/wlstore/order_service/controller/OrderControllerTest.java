@@ -44,7 +44,7 @@ class OrderControllerTest extends AbstractIntegrationTest {
     @Test
     void answersConflictWhenTheInventoryRejectsTheReservation() throws Exception {
         doThrow(new ReservationRejectedException("Insufficient stock for SKU-1"))
-                .when(inventoryGateway).reserve(any(), any());
+                .when(inventoryGateway).reserve(any(), any(), any());
 
         String body = """
                 {"lines": [{"sku": "SKU-1", "quantity": 2}]}
@@ -60,7 +60,7 @@ class OrderControllerTest extends AbstractIntegrationTest {
     @Test
     void answersServiceUnavailableWhenTheInventoryCannotBeReached() throws Exception {
         doThrow(new InventoryUnavailableException("Inventory timed out"))
-                .when(inventoryGateway).reserve(any(), any());
+                .when(inventoryGateway).reserve(any(), any(), any());
 
         String body = """
                 {"lines": [{"sku": "SKU-1", "quantity": 2}]}

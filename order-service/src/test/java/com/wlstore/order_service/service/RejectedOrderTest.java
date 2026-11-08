@@ -32,7 +32,7 @@ class RejectedOrderTest extends AbstractIntegrationTest {
         UUID tenant = UUID.randomUUID();
         List<OrderLineDTO> lines = List.of(new OrderLineDTO("SKU-1", 5));
         doThrow(new ReservationRejectedException("Not enough stock for SKU-1"))
-                .when(inventoryGateway).reserve(any(), eq(lines));
+                .when(inventoryGateway).reserve(any(), any(), eq(lines));
 
         assertThatThrownBy(() -> TenantContext.callWithTenant(tenant, () -> orderService.create(lines)))
                 .isInstanceOf(ReservationRejectedException.class)

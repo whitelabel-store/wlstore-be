@@ -39,7 +39,7 @@ public class OrderServiceImpl implements OrderService {
         Order pending = savePending(lines);
 
         try {
-            inventoryGateway.reserve(pending.getId(), lines);
+            inventoryGateway.reserve(pending.getTenantId(), pending.getId(), lines);
         } catch (ReservationRejectedException rejection) {
             markAs(pending.getId(), OrderStatus.REJECTED);
             throw rejection;

@@ -19,7 +19,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
-
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 
 class HttpInventoryGatewayTest {
     private MockRestServiceServer server;
@@ -46,7 +46,7 @@ class HttpInventoryGatewayTest {
                 .andExpect(jsonPath("$.lines[0].quantity").value(2))
                 .andRespond(withNoContent());
 
-        gateway.reserve(orderId, List.of(new OrderLineDTO("SKU-1", 2)));
+        gateway.reserve(UUID.randomUUID(), orderId, List.of(new OrderLineDTO("SKU-1", 2)));
 
         server.verify();
     }
@@ -60,7 +60,7 @@ class HttpInventoryGatewayTest {
         server.expect(requestTo("http://inventory/api/v1/reservations"))
                 .andRespond(withStatus(HttpStatus.CONFLICT));
 
-        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
+        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
                 .isInstanceOf(ReservationRejectedException.class);
     }
 
@@ -73,7 +73,7 @@ class HttpInventoryGatewayTest {
         server.expect(requestTo("http://inventory/api/v1/reservations"))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
+        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
                 .isInstanceOf(ReservationRejectedException.class);
     }
 
@@ -86,7 +86,7 @@ class HttpInventoryGatewayTest {
         server.expect(requestTo("http://inventory/api/v1/reservations"))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
+        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
                 .isInstanceOf(InventoryUnavailableException.class);
     }
 
@@ -99,7 +99,20 @@ class HttpInventoryGatewayTest {
         server.expect(requestTo("http://inventory/api/v1/reservations"))
                 .andRespond(withException(new SocketTimeoutException("Read timed out")));
 
-        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
+        assertThatThrownBy(() -> gateway.reserve(UUID.randomUUID(), UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2))))
                 .isInstanceOf(InventoryUnavailableException.class);
+    }
+
+    @Test
+    void forwardsTheTenantToTheInventoryInTheTenantHeader() {
+        UUID tenantId = UUID.randomUUID();
+
+        server.expect(requestTo("http://inventory/api/v1/reservations"))
+                .andExpect(header("X-Tenant-Id", tenantId.toString()))
+                .andRespond(withNoContent());
+
+        gateway.reserve(tenantId, UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2)));
+
+        server.verify();
     }
 }

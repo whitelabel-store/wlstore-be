@@ -38,7 +38,7 @@ public class InventoryClientConfigTest {
         server.expect(requestTo("http://inventory/api/v1/reservations"))
                 .andRespond(withNoContent());
 
-        gateway.reserve(UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2)));
+        gateway.reserve(UUID.randomUUID(), UUID.randomUUID(), List.of(new OrderLineDTO("SKU-1", 2)));
 
         server.verify();
     }

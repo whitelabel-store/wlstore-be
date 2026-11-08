@@ -38,7 +38,7 @@ class CreateOrderTest extends AbstractIntegrationTest {
 
         Order created = TenantContext.callWithTenant(tenant, () -> orderService.create(lines));
 
-        verify(inventoryGateway).reserve(created.getId(), lines);
+        verify(inventoryGateway).reserve(created.getTenantId(), created.getId(), lines);
 
         Order stored = TenantContext.callWithTenant(tenant,
                 () -> orderRepository.findById(created.getId()).orElseThrow());

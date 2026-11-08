@@ -32,7 +32,7 @@ class UnknownOutcomeOrderTest extends AbstractIntegrationTest {
         UUID tenant = UUID.randomUUID();
         List<OrderLineDTO> lines = List.of(new OrderLineDTO("SKU-1", 1));
         doThrow(new InventoryUnavailableException("Inventory did not answer"))
-                .when(inventoryGateway).reserve(any(), eq(lines));
+                .when(inventoryGateway).reserve(any(), any(), eq(lines));
 
         assertThatThrownBy(() -> TenantContext.callWithTenant(tenant, () -> orderService.create(lines)))
                 .isInstanceOf(InventoryUnavailableException.class);

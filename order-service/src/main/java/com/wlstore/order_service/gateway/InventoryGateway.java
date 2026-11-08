@@ -13,5 +13,5 @@ public interface InventoryGateway {
     /**
      * Reserva todas as linhas de uma vez, idempotente por orderId.
      */
-    void reserve(UUID orderId, List<OrderLineDTO> lines);
+    void reserve(UUID tenantId, UUID orderId, List<OrderLineDTO> lines);
 }

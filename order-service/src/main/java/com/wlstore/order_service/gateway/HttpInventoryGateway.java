@@ -1,5 +1,6 @@
 package com.wlstore.order_service.gateway;
 
+import com.wlstore.common.tenant.TenantFilter;
 import com.wlstore.order_service.dto.OrderLineDTO;
 import com.wlstore.order_service.exception.InventoryUnavailableException;
 import com.wlstore.order_service.exception.ReservationRejectedException;
@@ -20,11 +21,12 @@ public class HttpInventoryGateway implements InventoryGateway{
     }
 
     @Override
-    public void reserve(UUID orderId, List<OrderLineDTO> lines) {
+    public void reserve(UUID tenantId, UUID orderId, List<OrderLineDTO> lines) {
         try {
             restClient.post()
                     .uri("/api/v1/reservations")
                     .contentType(MediaType.APPLICATION_JSON)
+                    .header(TenantFilter.HEADER, tenantId.toString())
                     .body(new ReservationRequest(orderId, lines))
                     .retrieve()
                     .toBodilessEntity();
