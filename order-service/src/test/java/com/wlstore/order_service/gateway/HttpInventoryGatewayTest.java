@@ -2,6 +2,7 @@ package com.wlstore.order_service.gateway;
 
 import com.wlstore.order_service.dto.OrderLineDTO;
 import com.wlstore.order_service.exception.InventoryUnavailableException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -19,7 +20,18 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+
 class HttpInventoryGatewayTest {
+    private MockRestServiceServer server;
+    private InventoryGateway gateway;
+
+    @BeforeEach
+    void setUp() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://inventory");
+        server = MockRestServiceServer.bindTo(builder).build();
+        gateway = new HttpInventoryGateway(builder.build());
+    }
+
     @Test
     void sendsTheReservationToTheInventoryAndAcceptsA204() {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://inventory");
