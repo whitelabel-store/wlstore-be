@@ -15,6 +15,9 @@ spring:
       ddl-auto: validate
     show-sql: false
 
+inventory:
+  base-url: ${INVENTORY_BASE_URL:http://localhost:8084}
+
 # Eureka só existe localmente (discovery-server); no Kubernetes quem descobre
 # serviços é o DNS do cluster.
 eureka:

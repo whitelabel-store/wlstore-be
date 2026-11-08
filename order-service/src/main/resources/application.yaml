@@ -19,17 +19,15 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
-#  security:
-#    oauth2:
-#      resourceserver:
-#        jwt:
-#          issuer-uri: http://localhost:8086/realms/whitelabel
   data:
     web:
       pageable:
         default-page-size: 10
         max-page-size: 100
         one-indexed-parameters: false
+
+inventory:
+  base-url: ${INVENTORY_BASE_URL}
 
 springdoc:
   api-docs:
@@ -45,51 +43,11 @@ management:
   endpoint:
     health:
       show-details: always
-#  health:
-#    circuitbreakers:
-#      enabled: true
-#  tracing:
-#    sampling:
-#      probability: 1.0
-#  opentelemetry:
-#    tracing:
-#      export:
-#        otlp:
-#          endpoint: http://localhost:4318/v1/traces
-#    logging:
-#      export:
-#        otlp:
-#          endpoint: http://localhost:4318/v1/logs
-#  otlp:
-#    metrics:
-#      export:
-#        url: http://localhost:4318/v1/metrics
   endpoints:
     web:
       exposure:
         include: "refresh, health, circuitbreakers, circuitbreakerevents, prometheus"
 
-#logging:
-#  pattern:
-#    level: "%5p [${spring.application.name:},%X{trace_id:-},%X{span_id:-}]" #
-#
-#resilience4j:
-#  circuitbreaker:
-#    instances:
-#      stock:
-#        registerHealthIndicator: true
-#        slidingWindowType: COUNT_BASED
-#        slidingWindowSize: 5
-#        failureRateThreshold: 50
-#        waitDurationInOpenState: 5s
-#        permittedNumberOfCallsInHalfOpenState: 3
-#  retry:
-#    instances:
-#      stock:
-#        maxRetryAttempts: 3
-#        waitDuration: 2s
-#        enableExponentialBackoff: true
-#        exponentialBackoffMultiplier: 2
 
 server:
   port: 8083
